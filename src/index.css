@@ -1,0 +1,46 @@
+@import "tailwindcss";
+
+/* Optional custom theme configuration or global styles */
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white;
+  }
+}
+
+/* ─── Custom Keyframes ─────────────────────────────────────────────────────── */
+
+@keyframes floating {
+  0%   { transform: translateY(0px); }
+  50%  { transform: translateY(-15px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Subtle shadow that grows/shrinks in sync with the float */
+@keyframes pulse-shadow {
+  0%   { opacity: 0.6; transform: scaleX(1)    translateY(0px); }
+  50%  { opacity: 0.3; transform: scaleX(0.85) translateY(4px); }
+  100% { opacity: 0.6; transform: scaleX(1)    translateY(0px); }
+}
+
+/* ─── Tailwind v4 @theme tokens ────────────────────────────────────────────── */
+
+@theme {
+  --animate-floating: floating 3s ease-in-out infinite;
+  --animate-pulse-shadow: pulse-shadow 3s ease-in-out infinite;
+
+  --keyframes-floating-0:   { transform: translateY(0px); };
+  --keyframes-floating-50:  { transform: translateY(-15px); };
+  --keyframes-floating-100: { transform: translateY(0px); };
+}
+
+/* ─── Utility classes (fallback for direct use) ─────────────────────────────── */
+
+@layer utilities {
+  .animate-floating {
+    animation: floating 3s ease-in-out infinite;
+  }
+  .animate-pulse-shadow {
+    animation: pulse-shadow 3s ease-in-out infinite;
+  }
+}
+

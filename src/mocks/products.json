@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "title": "Aether Sound Wave Wireless Headphones",
+    "price": 299.99,
+    "category": "Electronics",
+    "vendorName": "Aether Audio Labs",
+    "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.8
+  },
+  {
+    "id": 2,
+    "title": "Chronos Classic Minimalist Watch",
+    "price": 189.50,
+    "category": "Accessories",
+    "vendorName": "Chronos Horology",
+    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.6
+  },
+  {
+    "id": 3,
+    "title": "Vanguard Ergonomic Mechanical Keyboard",
+    "price": 149.00,
+    "category": "Electronics",
+    "vendorName": "Vanguard Keys",
+    "image": "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.7
+  },
+  {
+    "id": 4,
+    "title": "Apex Leather Laptop Backpack",
+    "price": 120.00,
+    "category": "Bags",
+    "vendorName": "Apex Goods Co.",
+    "image": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.5
+  },
+  {
+    "id": 5,
+    "title": "Iris Smart Ambient Light",
+    "price": 59.99,
+    "category": "Home Decor",
+    "vendorName": "Iris Designs",
+    "image": "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.4
+  },
+  {
+    "id": 6,
+    "title": "Terra Espresso Roast Coffee Beans (1kg)",
+    "price": 32.50,
+    "category": "Food & Beverage",
+    "vendorName": "Terra Roasters",
+    "image": "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.9
+  },
+  {
+    "id": 7,
+    "title": "NeoFit Active Smart Band",
+    "price": 79.99,
+    "category": "Electronics",
+    "vendorName": "TechStore Baku",
+    "image": "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.2
+  },
+  {
+    "id": 8,
+    "title": "Lumina Ceramic Essential Oil Diffuser",
+    "price": 45.00,
+    "category": "Home Decor",
+    "vendorName": "Lumina Wellness",
+    "image": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.5
+  }
+]
