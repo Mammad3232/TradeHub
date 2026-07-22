@@ -17,6 +17,7 @@ import {
   Check,
 } from 'lucide-react';
 import productsData from '../mocks/products.json';
+import { useShop } from '../context/ShopContext';
 
 interface Review {
   id: number;
@@ -57,9 +58,10 @@ const mockReviews: Review[] = [
 export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { addToCart, toggleWishlist, wishlistItems, pushToast } = useShop();
+
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToCart, setAddedToCart] = useState<boolean>(false);
-  const [isWishlisted, setIsWishlisted] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
   const [activeColor, setActiveColor] = useState<string>('Space Black');
   const [activeSize, setActiveSize] = useState<string>('256GB');
@@ -96,12 +98,36 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
+  // Derived wishlist state — reactive to global store
+  const isWishlisted = wishlistItems.some((w) => String(w.id) === String(product.id));
+
   const handleAddToCart = () => {
+    addToCart({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.image,
+      brand: product.vendorName,
+    });
+    pushToast(`"${product.title.split(' ').slice(0, 3).join(' ')}…" added to cart!`, 'cart');
     setAddedToCart(true);
     setTimeout(() => {
       setAddedToCart(false);
-      navigate('/cart');
-    }, 1200);
+    }, 1500);
+  };
+
+  const handleWishlistToggle = () => {
+    toggleWishlist({
+      id: product.id,
+      title: product.title,
+      price: product.price,
+      image: product.image,
+      brand: product.vendorName,
+      category: product.category,
+      rating: product.rating,
+    });
+    const action = isWishlisted ? 'removed from' : 'added to';
+    pushToast(`"${product.title.split(' ').slice(0, 3).join(' ')}…" ${action} wishlist!`, 'info');
   };
 
   const handleShare = () => {
@@ -357,7 +383,7 @@ export const ProductDetail: React.FC = () => {
                 {/* Secondary Wishlist button */}
                 <button
                   type="button"
-                  onClick={() => setIsWishlisted(!isWishlisted)}
+                  onClick={handleWishlistToggle}
                   title={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                   className={`p-4 rounded-xl border border-slate-800 bg-[#0E1524] transition-all hover:bg-slate-800/50 cursor-pointer ${
                     isWishlisted ? 'text-rose-500 border-rose-500/30 bg-rose-500/5' : 'text-slate-400 hover:text-white'

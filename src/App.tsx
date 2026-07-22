@@ -29,6 +29,8 @@ import { LegalPage }         from './pages/LegalPage';
 import { HelpPage }          from './pages/HelpPage';
 import { CareersPage }       from './pages/CareersPage';
 import { BlogPage }          from './pages/BlogPage';
+import { CategoryPage }      from './pages/CategoryPage';
+import { SearchResultsPage } from './pages/SearchResultsPage';
 import { AdminRoute }        from './components/AdminRoute';
 import { ScrollToTop }       from './components/ScrollToTop';
 
@@ -242,6 +244,8 @@ function App() {
             <Route path="/help"            element={<HelpPage />} />
             <Route path="/privacy"         element={<LegalPage type="privacy" />} />
             <Route path="/terms"           element={<LegalPage type="terms" />} />
+            <Route path="/category/:categoryName" element={<CategoryPage />} />
+            <Route path="/search" element={<SearchResultsPage />} />
           </Route>
 
           {/* ── Vendor Routes ────────────────────────────────────────── */}

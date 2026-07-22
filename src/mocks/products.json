@@ -10,15 +10,6 @@
   },
   {
     "id": 2,
-    "title": "Chronos Classic Minimalist Watch",
-    "price": 189.50,
-    "category": "Accessories",
-    "vendorName": "Chronos Horology",
-    "image": "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60",
-    "rating": 4.6
-  },
-  {
-    "id": 3,
     "title": "Vanguard Ergonomic Mechanical Keyboard",
     "price": 149.00,
     "category": "Electronics",
@@ -27,17 +18,26 @@
     "rating": 4.7
   },
   {
-    "id": 4,
-    "title": "Apex Leather Laptop Backpack",
-    "price": 120.00,
-    "category": "Bags",
+    "id": 3,
+    "title": "Apex Leather Bomber Jacket",
+    "price": 249.50,
+    "category": "Fashion",
     "vendorName": "Apex Goods Co.",
-    "image": "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=60",
-    "rating": 4.5
+    "image": "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.9
+  },
+  {
+    "id": 4,
+    "title": "Urban Streetwear Performance Sneakers",
+    "price": 129.99,
+    "category": "Fashion",
+    "vendorName": "Urban Kicks",
+    "image": "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.6
   },
   {
     "id": 5,
-    "title": "Iris Smart Ambient Light",
+    "title": "Iris Smart Ambient Light & Lamp",
     "price": 59.99,
     "category": "Home Decor",
     "vendorName": "Iris Designs",
@@ -46,29 +46,65 @@
   },
   {
     "id": 6,
-    "title": "Terra Espresso Roast Coffee Beans (1kg)",
-    "price": 32.50,
-    "category": "Food & Beverage",
-    "vendorName": "Terra Roasters",
-    "image": "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=800&auto=format&fit=crop&q=60",
-    "rating": 4.9
-  },
-  {
-    "id": 7,
-    "title": "NeoFit Active Smart Band",
-    "price": 79.99,
-    "category": "Electronics",
-    "vendorName": "TechStore Baku",
-    "image": "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=800&auto=format&fit=crop&q=60",
-    "rating": 4.2
-  },
-  {
-    "id": 8,
     "title": "Lumina Ceramic Essential Oil Diffuser",
     "price": 45.00,
     "category": "Home Decor",
     "vendorName": "Lumina Wellness",
     "image": "https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&auto=format&fit=crop&q=60",
     "rating": 4.5
+  },
+  {
+    "id": 7,
+    "title": "Modern Web Architecture & Systems (Hardcover)",
+    "price": 39.99,
+    "category": "Books",
+    "vendorName": "Tech Press Publishing",
+    "image": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.9
+  },
+  {
+    "id": 8,
+    "title": "The Design of Everyday Systems & Interfaces",
+    "price": 49.00,
+    "category": "Books",
+    "vendorName": "Design Core Press",
+    "image": "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.8
+  },
+  {
+    "id": 9,
+    "title": "Titan Rubber Hex Dumbbell Set (2x 15kg)",
+    "price": 89.99,
+    "category": "Fitness",
+    "vendorName": "Titan Athletics",
+    "image": "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.7
+  },
+  {
+    "id": 10,
+    "title": "Pulse Pro Smart Fitness Tracking Ring",
+    "price": 159.00,
+    "category": "Fitness",
+    "vendorName": "Pulse Tech Labs",
+    "image": "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.6
+  },
+  {
+    "id": 11,
+    "title": "Terra Espresso Roast Artisan Coffee Beans (1kg)",
+    "price": 32.50,
+    "category": "Beverages",
+    "vendorName": "Terra Roasters",
+    "image": "https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.9
+  },
+  {
+    "id": 12,
+    "title": "Organic Alpine Herbal Tea Reserve Selection",
+    "price": 24.00,
+    "category": "Beverages",
+    "vendorName": "Alpine Tea Co.",
+    "image": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=800&auto=format&fit=crop&q=60",
+    "rating": 4.8
   }
 ]

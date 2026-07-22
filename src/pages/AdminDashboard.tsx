@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { AdminVendors } from '../components/AdminVendors';
 import {
   Chart as ChartJS,
   ArcElement,
@@ -221,9 +222,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     navigate(`/admin/${newTab}`, { replace: true });
   };
 
-  // State Management
-  const [users, setUsers] = useState<UserItem[]>(initialUsers);
-  const [vendors, setVendors] = useState<VendorItem[]>(initialVendors);
+  // State Management — users persisted to localStorage
+  const [users, setUsers] = useState<UserItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vendora_admin_users');
+      return saved ? (JSON.parse(saved) as UserItem[]) : initialUsers;
+    } catch {
+      return initialUsers;
+    }
+  });
+
+  // Sync users array to localStorage on every change
+  useEffect(() => {
+    localStorage.setItem('vendora_admin_users', JSON.stringify(users));
+  }, [users]);
+
+  // State Management — vendors persisted to localStorage
+  const [vendors, setVendors] = useState<VendorItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vendora_admin_vendors');
+      return saved ? (JSON.parse(saved) as VendorItem[]) : initialVendors;
+    } catch {
+      return initialVendors;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('vendora_admin_vendors', JSON.stringify(vendors));
+  }, [vendors]);
+
   const [orders, setOrders] = useState<OrderItem[]>(initialOrders);
   const [brands] = useState<Brand[]>(initialBrands);
   const [products] = useState<Product[]>(initialProducts);
@@ -235,6 +262,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'Admin' | 'Vendor' | 'Customer'>('Customer');
   const [newUserStatus, setNewUserStatus] = useState<'Active' | 'Suspended'>('Active');
+
+  // Add Vendor Modal State
+  const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
+  const [newVendorStoreName, setNewVendorStoreName] = useState('');
+  const [newVendorOwner, setNewVendorOwner] = useState('');
+  const [newVendorEmail, setNewVendorEmail] = useState('');
+  const [newVendorStatus, setNewVendorStatus] = useState<'Active' | 'Pending' | 'Suspended'>('Pending');
 
   // Platform Settings State
   const [settings, setSettings] = useState({
@@ -281,6 +315,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     setNewUserStatus('Active');
   };
 
+  const handleCreateVendorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorStoreName.trim() || !newVendorOwner.trim() || !newVendorEmail.trim()) return;
+
+    const createdVendor: VendorItem = {
+      id: Date.now(),
+      storeName: newVendorStoreName.trim(),
+      owner: newVendorOwner.trim(),
+      email: newVendorEmail.trim(),
+      products: 0,
+      totalSales: 0,
+      status: newVendorStatus,
+    };
+
+    setVendors((prev) => [createdVendor, ...prev]);
+    setIsAddVendorModalOpen(false);
+    setNewVendorStoreName('');
+    setNewVendorOwner('');
+    setNewVendorEmail('');
+    setNewVendorStatus('Pending');
+  };
+
   const handleDeleteUser = (id: number) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       setUsers((prev) => prev.filter((u) => u.id !== id));
@@ -291,8 +347,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
   };
 
+  const toggleVendorStatus = (vendorId: number, newStatus: 'Active' | 'Pending' | 'Suspended') => {
+    setVendors((prev) => prev.map((v) => (v.id === vendorId ? { ...v, status: newStatus } : v)));
+  };
+
   const handleVendorStatusChange = (id: number, newStatus: 'Active' | 'Pending' | 'Suspended') => {
-    setVendors((prev) => prev.map((v) => (v.id === id ? { ...v, status: newStatus } : v)));
+    toggleVendorStatus(id, newStatus);
   };
 
   const handleOrderStatusChange = (id: string, newStatus: 'Pending' | 'Completed' | 'Cancelled') => {
@@ -384,27 +444,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         </div>
 
         {/* Conditional Header Action Buttons */}
-        {activeTab === 'users' && (
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/20 cursor-pointer"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>+ Add User</span>
-          </button>
-        )}
-
-        {activeTab === 'vendors' && (
-          <button
-            type="button"
-            onClick={() => alert('Add Vendor form / modal')}
-            className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20 cursor-pointer"
-          >
-            <Store className="w-4 h-4" />
-            <span>+ Add Vendor</span>
-          </button>
-        )}
 
         {activeTab === 'products' && (
           <button
@@ -606,76 +645,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
       )}
 
       {/* ════════════════════════ 3. VENDORS TAB ════════════════════════ */}
-      {activeTab === 'vendors' && (
-        <div className="animate-in fade-in duration-200">
-          <div className="bg-[#111827] border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
-            <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Merchant & Vendor Directory</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{vendors.length} store owners registered on TradeHub.</p>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-950/40 border-b border-slate-800">
-                    <th className={thClass}>Store & Owner</th>
-                    <th className={thClass}>Products</th>
-                    <th className={thClass}>Total Sales</th>
-                    <th className={thClass}>Status</th>
-                    <th className={`${thClass} text-right`}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {vendors.map((v) => (
-                    <tr key={v.id} className="hover:bg-slate-950/20 transition-colors">
-                      <td className={tdClass}>
-                        <div>
-                          <span className="font-bold text-white text-sm block">{v.storeName}</span>
-                          <span className="text-[11px] text-slate-400">{v.owner} ({v.email})</span>
-                        </div>
-                      </td>
-                      <td className={tdClass}>
-                        <span className="font-bold text-white">{v.products}</span> items
-                      </td>
-                      <td className={tdClass}>
-                        <span className="font-bold text-emerald-400">${v.totalSales.toLocaleString()}</span>
-                      </td>
-                      <td className={tdClass}>
-                        <span className={badgeClass(v.status)}>{v.status}</span>
-                      </td>
-                      <td className={`${tdClass} text-right`}>
-                        <div className="inline-flex items-center justify-end gap-2">
-                          {v.status !== 'Active' && (
-                            <button
-                              type="button"
-                              onClick={() => handleVendorStatusChange(v.id, 'Active')}
-                              className="inline-flex items-center gap-1 py-1.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 rounded-lg text-xs font-semibold transition-all border border-emerald-500/20 cursor-pointer"
-                            >
-                              <CheckCircle className="w-3.5 h-3.5" />
-                              Approve
-                            </button>
-                          )}
-                          {v.status !== 'Suspended' && (
-                            <button
-                              type="button"
-                              onClick={() => handleVendorStatusChange(v.id, 'Suspended')}
-                              className="inline-flex items-center gap-1 py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold transition-all border border-red-500/20 cursor-pointer"
-                            >
-                              <Ban className="w-3.5 h-3.5" />
-                              Suspend
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === 'vendors' && <AdminVendors />}
 
       {/* ════════════════════════ 4. ORDERS TAB ════════════════════════ */}
       {activeTab === 'orders' && (
@@ -1234,6 +1204,109 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                 >
                   <UserPlus className="w-4 h-4" />
                   <span>Create User</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ════════════════════════ STYLISH ADD VENDOR MODAL ════════════════════════ */}
+      {isAddVendorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#0E1524] border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-6">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+                  <Store className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-white">Add New Vendor</h3>
+                  <p className="text-xs text-slate-400">Register a new merchant account on TradeHub.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAddVendorModalOpen(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Form */}
+            <form onSubmit={handleCreateVendorSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Store Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Nexus Tech Baku"
+                  value={newVendorStoreName}
+                  onChange={(e) => setNewVendorStoreName(e.target.value)}
+                  className="w-full bg-[#111827] border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Owner Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Rashad Mammadov"
+                  value={newVendorOwner}
+                  onChange={(e) => setNewVendorOwner(e.target.value)}
+                  className="w-full bg-[#111827] border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. contact@nexustech.az"
+                  value={newVendorEmail}
+                  onChange={(e) => setNewVendorEmail(e.target.value)}
+                  className="w-full bg-[#111827] border border-slate-800 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                  Initial Status
+                </label>
+                <select
+                  value={newVendorStatus}
+                  onChange={(e) => setNewVendorStatus(e.target.value as 'Active' | 'Pending' | 'Suspended')}
+                  className="w-full bg-[#111827] border border-slate-800 text-white rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer font-bold"
+                >
+                  <option value="Pending">Pending Approval</option>
+                  <option value="Active">Active</option>
+                  <option value="Suspended">Suspended</option>
+                </select>
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsAddVendorModalOpen(false)}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2 cursor-pointer"
+                >
+                  <Store className="w-4 h-4" />
+                  <span>Save Vendor</span>
                 </button>
               </div>
             </form>

@@ -212,7 +212,7 @@ export const BecomeVendorPage: React.FC = () => {
               </label>
               <div className={`relative flex items-center bg-[#0B1120] border ${errors.phone ? 'border-red-500' : 'border-slate-800'} rounded-lg focus-within:ring-2 focus-within:ring-indigo-500 transition-all`}>
                 
-                {/* Left Side: Country Trigger */}
+                {/* Left Side: Country Trigger (PRESERVED 100% UNTOUCHED) */}
                 <button
                   type="button"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -226,16 +226,16 @@ export const BecomeVendorPage: React.FC = () => {
                 {/* Vertical Divider */}
                 <div className="w-[1px] h-6 bg-slate-700"></div>
 
-                {/* Right Side: Number Input */}
+                {/* Right Side: Fully Interactive Number Input */}
                 <div className="flex items-center flex-1 px-3 py-3">
-                  <span className="text-slate-500 mr-2 text-sm select-none">{selectedCountry.dialCode}</span>
+                  <span className="text-slate-500 mr-2 text-sm select-none pointer-events-none">{selectedCountry.dialCode}</span>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="50 123 4567"
-                    className="w-full bg-transparent border-none outline-none text-slate-200 placeholder:text-slate-655 text-sm"
+                    className="w-full bg-transparent border-none outline-none text-slate-200 placeholder:text-slate-500 text-sm autofill:bg-[#131B2C] autofill:text-white [webkit-text-fill-color:white] [transition:background-color_5000s_ease-in-out_0s]"
                   />
                 </div>
 

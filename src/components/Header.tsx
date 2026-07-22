@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import mockProducts from '../mocks/products.json';
 import {
   Search,
   Heart,
@@ -18,6 +19,7 @@ import {
   ArrowRight,
   Plus,
   Minus,
+  Check,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 
@@ -93,15 +95,30 @@ export const Header: React.FC<HeaderProps> = ({
     .slice(0, 2) || 'ME';
 
   // ── Local UI state ───────────────────────────────────────────────────────
-  const [query,                  setQuery]                  = useState('');
-  const [category,               setCategory]               = useState('All');
-  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
-  const [mobileMenuOpen,         setMobileMenuOpen]         = useState(false);
-  const [mobileSearchOpen,       setMobileSearchOpen]       = useState(false);
-  const [profileOpen,            setProfileOpen]            = useState(false);
+  const [query,            setQuery]            = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [isCategoryOpen,   setIsCategoryOpen]   = useState(false);
+  const [showSuggestions, setShowSuggestions]   = useState(false);
+  const [mobileMenuOpen,   setMobileMenuOpen]   = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [profileOpen,      setProfileOpen]      = useState(false);
 
   const profileRef  = useRef<HTMLDivElement>(null);
   const miniCartRef = useRef<HTMLDivElement>(null);
+
+  // Filter top 5 live autocomplete suggestions based on query
+  const liveSuggestions = useMemo(() => {
+    if (query.trim().length < 2) return [];
+    const term = query.toLowerCase().trim();
+    return (mockProducts as any[])
+      .filter((p) => {
+        const titleMatch    = (p.title || '').toLowerCase().includes(term);
+        const categoryMatch = (p.category || '').toLowerCase().includes(term);
+        const vendorMatch   = (p.vendorName || '').toLowerCase().includes(term);
+        return titleMatch || categoryMatch || vendorMatch;
+      })
+      .slice(0, 5);
+  }, [query]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -120,7 +137,8 @@ export const Header: React.FC<HeaderProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
-      navigate(`/?search=${encodeURIComponent(query.trim())}&category=${encodeURIComponent(category)}`);
+      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+      setShowSuggestions(false);
       setMobileSearchOpen(false);
     }
   };
@@ -181,51 +199,112 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="hidden md:flex flex-1 max-w-2xl">
               <form
                 onSubmit={handleSearchSubmit}
-                className="flex w-full bg-[#111827] border border-slate-700 rounded-full overflow-hidden focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all relative"
+                className="flex w-full bg-[#111827] border border-slate-700 rounded-full overflow-visible focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all relative"
               >
-                <button
-                  type="button"
-                  onClick={() => setIsCategoryDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-1 px-4 bg-[#1A2333] border-r border-slate-700 text-sm text-slate-350 hover:text-white transition-colors cursor-pointer whitespace-nowrap min-w-[70px] select-none"
-                >
-                  <span>{category}</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
+                {/* Category Selector Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                    className="flex items-center gap-2 px-4 h-full bg-[#1A2333] border-r border-slate-700 rounded-l-full text-sm text-slate-300 hover:text-white transition-colors cursor-pointer whitespace-nowrap select-none"
+                  >
+                    <span>{selectedCategory}</span>
+                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                  </button>
 
-                {isCategoryDropdownOpen && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setIsCategoryDropdownOpen(false)} />
-                    <div className="absolute left-0 top-12 mt-1 w-48 bg-[#0E1524] border border-slate-800 rounded-xl shadow-2xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-150">
-                      <div className="p-1.5 space-y-0.5">
+                  {/* Dropdown Menu (Absolute Positioning) */}
+                  {isCategoryOpen && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setIsCategoryOpen(false)} />
+                      <div className="absolute top-full left-0 mt-2 w-48 bg-[#111827] border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden py-1 animate-in fade-in slide-in-from-top-2 duration-150">
                         {categories.map((cat) => (
-                          <button
+                          <div
                             key={cat}
-                            type="button"
-                            onClick={() => { setCategory(cat); setIsCategoryDropdownOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
-                              category === cat
-                                ? 'bg-purple-600/15 text-purple-400'
-                                : 'text-slate-300 hover:text-white hover:bg-slate-800/50'
+                            onClick={() => {
+                              setSelectedCategory(cat);
+                              setIsCategoryOpen(false);
+                              if (cat === 'All') {
+                                navigate('/');
+                              } else {
+                                const slug = cat.toLowerCase().replace(/\s+/g, '-');
+                                navigate(`/category/${slug}`);
+                              }
+                            }}
+                            className={`px-4 py-3 text-sm cursor-pointer transition-colors flex items-center justify-between ${
+                              selectedCategory === cat
+                                ? 'bg-purple-600/20 text-purple-400 font-bold'
+                                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                             }`}
                           >
-                            {cat}
-                          </button>
+                            <span>{cat}</span>
+                            {selectedCategory === cat && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                          </div>
                         ))}
                       </div>
-                    </div>
-                  </>
-                )}
+                    </>
+                  )}
+                </div>
 
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search for products, brands and more..."
-                  className="w-full bg-transparent border-none text-sm text-white px-4 py-2.5 outline-none placeholder:text-slate-500"
-                />
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    type="text"
+                    value={query}
+                    onFocus={() => setShowSuggestions(true)}
+                    onChange={(e) => {
+                      setQuery(e.target.value);
+                      setShowSuggestions(true);
+                    }}
+                    placeholder="Search for products, brands and more..."
+                    className="w-full bg-transparent border-none text-sm text-white px-4 py-2.5 outline-none placeholder:text-slate-500"
+                  />
+
+                  {/* ── Live Suggestion Autocomplete Dropdown ── */}
+                  {query.trim().length >= 2 && showSuggestions && (
+                    <>
+                      <div className="fixed inset-0 z-40" onClick={() => setShowSuggestions(false)} />
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-[#111827]/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-800/50 animate-in fade-in slide-in-from-top-2 duration-150">
+                        {liveSuggestions.length === 0 ? (
+                          <div className="p-4 text-center text-xs text-slate-400 font-medium">
+                            No matching products found
+                          </div>
+                        ) : (
+                          liveSuggestions.map((product) => (
+                            <div
+                              key={product.id}
+                              onClick={() => {
+                                navigate(`/product/${product.id}`);
+                                setQuery('');
+                                setShowSuggestions(false);
+                              }}
+                              className="hover:bg-slate-800/80 cursor-pointer transition-colors p-3 flex items-center gap-3 group"
+                            >
+                              <img
+                                src={product.image}
+                                alt={product.title}
+                                className="w-10 h-10 object-cover rounded-lg bg-slate-800 flex-shrink-0 group-hover:scale-105 transition-transform"
+                              />
+                              <div className="min-w-0 flex-1">
+                                <h4 className="text-white text-sm font-bold truncate group-hover:text-purple-300 transition-colors">
+                                  {product.title}
+                                </h4>
+                                <p className="text-xs text-slate-400 truncate">
+                                  {product.category} • {product.vendorName || 'Vendora'}
+                                </p>
+                              </div>
+                              <span className="text-purple-400 font-semibold text-sm ml-auto whitespace-nowrap">
+                                ${product.price.toFixed(2)}
+                              </span>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <button
                   type="submit"
-                  className="px-5 bg-purple-600 hover:bg-purple-500 text-white transition-colors flex items-center justify-center cursor-pointer"
+                  className="px-5 bg-purple-600 hover:bg-purple-500 text-white transition-colors flex items-center justify-center cursor-pointer rounded-r-full"
                   aria-label="Search"
                 >
                   <Search className="w-4 h-4" />
