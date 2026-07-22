@@ -1,37 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Compass, Globe, Mail, ArrowUpRight, Heart } from 'lucide-react';
+import { ShoppingBag, Compass, Globe, Mail, ArrowUpRight, Send, Heart } from 'lucide-react';
+import { useShop } from '../context/ShopContext';
 
 const footerLinks = {
   Platform: [
-    { label: 'Marketplace',      to: '/' },
-    { label: 'Vendor Portal',    to: '/vendor/dashboard' },
-    { label: 'Admin Dashboard',  to: '/admin/dashboard' },
-    { label: 'My Orders',        to: '/my-orders' },
+    { label: 'Marketplace',     to: '/' },
+    { label: 'Vendor Portal',   to: '/vendor/dashboard' },
+    { label: 'Admin Dashboard', to: '/admin' },
+    { label: 'My Orders',       to: '/my-orders' },
   ],
   Company: [
-    { label: 'About Us',    to: '#about' },
-    { label: 'Careers',     to: '#careers' },
-    { label: 'Blog',        to: '#blog' },
-    { label: 'Press',       to: '#press' },
+    { label: 'About Us', to: '/about' },
+    { label: 'Careers',  to: '/careers' },
+    { label: 'Blog',     to: '/blog' },
+    { label: 'Press',    to: '/press' },
   ],
   Support: [
-    { label: 'Help Center',   to: '#help' },
-    { label: 'Contact Us',    to: '#contact' },
-    { label: 'Privacy Policy', to: '#privacy' },
-    { label: 'Terms of Service', to: '#terms' },
+    { label: 'Help Center',      to: '/help' },
+    { label: 'Contact Us',       to: '/contact' },
+    { label: 'Privacy Policy',   to: '/privacy' },
+    { label: 'Terms of Service', to: '/terms' },
   ],
 };
 
 const socials = [
-  { label: 'Website',  Icon: Globe },
-  { label: 'Explore',  Icon: Compass },
-  { label: 'Email',    Icon: Mail },
+  { label: 'Website', Icon: Globe, href: 'https://vendora.store' },
+  { label: 'Explore', Icon: Compass, href: '/deals' },
+  { label: 'Email',   Icon: Mail, href: 'mailto:support@vendora.store' },
 ];
 
 export const Footer: React.FC = () => {
+  const { pushToast } = useShop();
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) {
+      return;
+    }
+    pushToast('Thank you for subscribing to our newsletter!', 'info');
+    setNewsletterEmail('');
+  };
+
   return (
-    <footer className="bg-slate-950 border-t border-slate-900">
+    <footer className="bg-slate-950 border-t border-slate-900 text-slate-400">
       {/* ── Main Grid ─────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-10">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
@@ -51,10 +64,10 @@ export const Footer: React.FC = () => {
             </p>
             {/* Social links */}
             <div className="flex items-center gap-3">
-              {socials.map(({ label, Icon }) => (
+              {socials.map(({ label, Icon, href }) => (
                 <a
                   key={label}
-                  href="#"
+                  href={href}
                   aria-label={label}
                   className="p-2 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 hover:text-white hover:border-slate-700 hover:bg-slate-800 transition-all"
                 >
@@ -76,7 +89,7 @@ export const Footer: React.FC = () => {
                       className="text-sm text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1 group"
                     >
                       {label}
-                      <ArrowUpRight className="h-3 w-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all" />
+                      <ArrowUpRight className="h-3 w-3 opacity-0 -translate-y-0.5 group-hover:opacity-100 group-hover:translate-y-0 transition-all text-purple-400" />
                     </Link>
                   </li>
                 ))}
@@ -91,29 +104,33 @@ export const Footer: React.FC = () => {
             <h4 className="font-bold text-white">Stay in the loop</h4>
             <p className="text-xs text-slate-400 mt-0.5">Get new product drops and exclusive deals directly to your inbox.</p>
           </div>
-          <form className="flex w-full sm:w-auto gap-2" onSubmit={(e) => e.preventDefault()}>
+          <form className="flex w-full sm:w-auto gap-2" onSubmit={handleSubscribe}>
             <input
               type="email"
+              required
+              value={newsletterEmail}
+              onChange={(e) => setNewsletterEmail(e.target.value)}
               placeholder="you@email.com"
               className="flex-1 sm:w-60 bg-slate-900 border border-slate-800 text-slate-100 text-sm px-4 py-2.5 rounded-xl focus:outline-none focus:border-indigo-500 transition-colors placeholder:text-slate-600"
             />
             <button
               type="submit"
-              className="bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-indigo-600/20"
+              className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-purple-600/30 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
-              Subscribe
+              <span>Subscribe</span>
+              <Send className="h-3.5 w-3.5" />
             </button>
           </form>
         </div>
 
         {/* ── Bottom Bar ──────────────────────────────────────────── */}
-        <div className="mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <p>
-            &copy; {new Date().getFullYear()} Vendora, Inc. All rights reserved.
-          </p>
-          <p className="flex items-center gap-1">
-            Built with <Heart className="h-3 w-3 text-red-400 fill-red-400 mx-0.5" /> for independent creators.
-          </p>
+        <div className="mt-10 pt-6 border-t border-slate-900 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+          <p>© {new Date().getFullYear()} Vendora Inc. All rights reserved.</p>
+          <div className="flex items-center gap-1">
+            <span>Built with</span>
+            <Heart className="h-3.5 w-3.5 text-rose-500 fill-rose-500" />
+            <span>for creator-first commerce.</span>
+          </div>
         </div>
       </div>
     </footer>

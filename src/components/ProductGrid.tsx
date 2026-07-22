@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Star, ShoppingCart, Heart, ArrowRight } from 'lucide-react';
+import { Star, ShoppingCart, Heart, ArrowRight, Check } from 'lucide-react';
+import { useShop } from '../context/ShopContext';
 
 interface MockProduct {
   id: number;
@@ -96,24 +97,50 @@ const mockFeaturedProducts: MockProduct[] = [
 ];
 
 export const ProductGrid: React.FC = () => {
-  const [wishlist, setWishlist] = useState<Record<number, boolean>>({});
-  const [cartStatus, setCartStatus] = useState<Record<number, boolean>>({});
+  const { addToCart, toggleWishlist, isWishlisted, pushToast, setMiniCartOpen } = useShop();
 
-  const toggleWishlist = (id: number) => {
-    setWishlist((prev) => ({ ...prev, [id]: !prev[id] }));
+  // Per-card "just added" flash state (local only, UI feedback)
+  const [addedIds, setAddedIds] = useState<Record<number, boolean>>({});
+
+  const handleAddToCart = (product: MockProduct) => {
+    addToCart({
+      id: product.id,
+      title: product.title,
+      brand: product.brand,
+      price: product.price,
+      image: product.image,
+    });
+
+    // Flash the check icon for 1.5 s
+    setAddedIds((prev) => ({ ...prev, [product.id]: true }));
+    setTimeout(
+      () => setAddedIds((prev) => ({ ...prev, [product.id]: false })),
+      1500,
+    );
+
+    pushToast(`"${product.title.split(' ').slice(0, 3).join(' ')}…" added to cart!`, 'cart');
+    setMiniCartOpen(true);
   };
 
-  const handleAddToCart = (id: number) => {
-    setCartStatus((prev) => ({ ...prev, [id]: true }));
-    setTimeout(() => {
-      setCartStatus((prev) => ({ ...prev, [id]: false }));
-    }, 1500);
+  const handleToggleWishlist = (product: MockProduct) => {
+    const wasInList = isWishlisted(product.id);
+    toggleWishlist({
+      id: product.id,
+      title: product.title,
+      brand: product.brand,
+      price: product.price,
+      image: product.image,
+    });
+    pushToast(
+      wasInList ? 'Removed from wishlist' : `Added "${product.title.split(' ').slice(0, 3).join(' ')}…" to wishlist`,
+      'wishlist',
+    );
   };
 
   return (
     <section className="w-full bg-[#060913] py-12 px-6">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
         {/* ── Section Header */}
         <div className="flex items-end justify-between border-b border-slate-800/60 pb-5">
           <div className="text-left space-y-1">
@@ -136,13 +163,13 @@ export const ProductGrid: React.FC = () => {
         {/* ── Product Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {mockFeaturedProducts.map((product) => {
-            const isWishlisted = !!wishlist[product.id];
-            const isAdded = !!cartStatus[product.id];
-            
+            const wishlisted = isWishlisted(product.id);
+            const justAdded  = !!addedIds[product.id];
+
             return (
               <article
                 key={product.id}
-                className="group relative bg-[#0B1120] border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-350"
+                className="group relative bg-[#0B1120] border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300"
               >
                 {/* ── Product Image Box */}
                 <div className="relative h-56 w-full overflow-hidden bg-slate-950">
@@ -156,7 +183,7 @@ export const ProductGrid: React.FC = () => {
                   {/* Faded overlay on card hover */}
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                  {/* Absolute Badges (Left) */}
+                  {/* Badge */}
                   {product.badge && (
                     <div className="absolute top-3 left-3 z-10">
                       <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider shadow-lg ${
@@ -171,16 +198,20 @@ export const ProductGrid: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Wishlist Button (Right) */}
+                  {/* Wishlist Button */}
                   <button
                     type="button"
-                    onClick={() => toggleWishlist(product.id)}
-                    className="absolute top-3 right-3 z-10 p-2 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/50 text-slate-400 hover:text-white hover:scale-110 transition-all cursor-pointer"
-                    aria-label="Toggle wishlist"
+                    onClick={() => handleToggleWishlist(product)}
+                    className={`absolute top-3 right-3 z-10 p-2 rounded-full backdrop-blur-md border transition-all cursor-pointer hover:scale-110 ${
+                      wishlisted
+                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-400'
+                        : 'bg-slate-900/80 border-slate-700/50 text-slate-400 hover:text-rose-400'
+                    }`}
+                    aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
                   >
                     <Heart
-                      className={`h-4.5 w-4.5 transition-colors ${
-                        isWishlisted ? 'fill-rose-500 text-rose-500' : 'text-slate-300'
+                      className={`h-4 w-4 transition-all duration-200 ${
+                        wishlisted ? 'fill-rose-500 text-rose-500 scale-110' : ''
                       }`}
                     />
                   </button>
@@ -188,7 +219,7 @@ export const ProductGrid: React.FC = () => {
 
                 {/* ── Product Info */}
                 <div className="flex-1 p-5 flex flex-col gap-3">
-                  
+
                   {/* Brand & Category */}
                   <div className="flex items-center justify-between text-[10px] font-bold tracking-widest text-slate-500">
                     <span className="uppercase">{product.brand}</span>
@@ -219,7 +250,7 @@ export const ProductGrid: React.FC = () => {
                     </span>
                   </div>
 
-                  {/* Price & Action Row */}
+                  {/* Price & Add-to-Cart */}
                   <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-800/80">
                     <div>
                       <span className="text-lg font-bold text-white">${product.price.toFixed(2)}</span>
@@ -227,15 +258,18 @@ export const ProductGrid: React.FC = () => {
 
                     <button
                       type="button"
-                      onClick={() => handleAddToCart(product.id)}
+                      onClick={() => handleAddToCart(product)}
                       className={`p-2.5 rounded-xl border transition-all duration-200 cursor-pointer ${
-                        isAdded
-                          ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
-                          : 'border-slate-800 bg-slate-900/50 hover:bg-purple-600 hover:border-purple-500 hover:text-white text-slate-300'
+                        justAdded
+                          ? 'bg-emerald-500/15 border-emerald-500 text-emerald-400 scale-110'
+                          : 'border-slate-700 bg-slate-900/50 hover:bg-purple-600 hover:border-purple-500 hover:text-white text-slate-300'
                       }`}
                       aria-label="Add to cart"
                     >
-                      <ShoppingCart className="h-4.5 w-4.5" />
+                      {justAdded
+                        ? <Check className="h-4 w-4" />
+                        : <ShoppingCart className="h-4 w-4" />
+                      }
                     </button>
                   </div>
 
