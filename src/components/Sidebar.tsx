@@ -18,6 +18,7 @@ interface SidebarLink {
 interface SidebarProps {
   role: Role;
   storeName?: string;
+  onSignOut?: () => void;
 }
 
 // ─── Link Definitions ────────────────────────────────────────────────────────
@@ -58,7 +59,7 @@ const roleConfig: Record<Role, { links: SidebarLink[]; label: string; color: str
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export const Sidebar: React.FC<SidebarProps> = ({ role, storeName }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ role, storeName, onSignOut }) => {
   const { links, label, accentBg } = roleConfig[role];
 
   return (
@@ -102,7 +103,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, storeName }) => {
       </nav>
 
       {/* ── Footer ─────────────────────────────────────────────────── */}
-      <div className="px-5 py-4 border-t border-slate-800/80">
+      <div className="px-5 py-4 border-t border-slate-800/80 flex items-center justify-between">
         <NavLink
           to={role === 'admin' ? '/admin/settings' : '/vendor/settings'}
           className="flex items-center gap-3 text-sm text-slate-500 hover:text-white transition-colors"
@@ -110,6 +111,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, storeName }) => {
           <Settings className="h-4 w-4" />
           <span>Settings</span>
         </NavLink>
+        <button
+          type="button"
+          onClick={() => {
+            localStorage.removeItem('vendora_user');
+            localStorage.removeItem('mockUser');
+            localStorage.removeItem('vendora_active_user');
+            if (onSignOut) onSignOut();
+            window.location.href = '/';
+          }}
+          className="text-xs text-rose-400 hover:text-rose-300 font-semibold cursor-pointer"
+        >
+          Sign Out
+        </button>
       </div>
     </aside>
   );

@@ -8,7 +8,10 @@ import {
   Menu,
   ChevronDown,
   X,
+  Shield,
   ShieldCheck,
+  Store,
+  LayoutDashboard,
 } from 'lucide-react';
 
 export interface HeaderCurrentUser {
@@ -22,15 +25,34 @@ interface HeaderProps {
   cartCount?: number;
   wishlistCount?: number;
   currentUser?: HeaderCurrentUser;
+  siteSettings?: { siteName: string };
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   cartCount = 3,
   wishlistCount = 2,
   currentUser: propUser,
+  siteSettings,
+  onSignOut,
 }) => {
+  const navigate = useNavigate();
+
+  // ── Logout handler
+  const handleLogout = () => {
+    localStorage.removeItem('vendora_user');
+    localStorage.removeItem('mockUser');
+    localStorage.removeItem('vendora_active_user');
+    if (onSignOut) {
+      onSignOut();
+    }
+    setProfileOpen(false);
+    setMobileMenuOpen(false);
+    navigate('/');
+  };
+
   // ── Auth state — supports prop passing from App.tsx or localStorage fallback
-  const rawSession = localStorage.getItem('vendora_active_user');
+  const rawSession = localStorage.getItem('vendora_user') || localStorage.getItem('mockUser') || localStorage.getItem('vendora_active_user');
   const localUser = rawSession
     ? (JSON.parse(rawSession) as HeaderCurrentUser)
     : { isLoggedIn: false, role: 'Guest', name: '', email: '' };
@@ -39,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isLoggedIn = !!currentUser?.isLoggedIn;
   const isAdmin    = isLoggedIn && currentUser?.role === 'Admin';
+  const isVendor   = isLoggedIn && currentUser?.role === 'Vendor';
 
   // Derive avatar initials: "Alex Doe" → "AD"
   const initials = (currentUser?.name ?? '')
@@ -66,8 +89,6 @@ export const Header: React.FC<HeaderProps> = ({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  const navigate = useNavigate();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,7 +122,9 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/20 group-hover:bg-purple-500 transition-colors">
                 <ShoppingBag className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl md:text-2xl font-bold text-white tracking-tight">Vendora</span>
+              <span className="text-xl md:text-2xl font-bold text-white tracking-tight">
+                {siteSettings?.siteName || 'Vendora'}
+              </span>
             </Link>
           </div>
 
@@ -211,15 +234,25 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </Link>
 
-            {/* ── Admin pill — desktop only, Admins only ── */}
-            {isAdmin && (
+            {/* ── Role-based dashboard shortcut pill — desktop only ── */}
+            {currentUser?.isLoggedIn && currentUser?.role === 'Admin' && (
               <Link
-                to="/admin/dashboard"
+                to="/admin"
                 className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/25 bg-red-500/5 text-red-400 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-300 transition-all text-xs font-bold"
                 title="Admin Panel"
               >
-                <ShieldCheck className="w-3.5 h-3.5" />
+                <Shield className="w-3.5 h-3.5" />
                 <span>Admin</span>
+              </Link>
+            )}
+            {currentUser?.isLoggedIn && currentUser?.role === 'Vendor' && (
+              <Link
+                to="/vendor/dashboard"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/25 bg-emerald-500/5 text-emerald-400 hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:text-emerald-300 transition-all text-xs font-bold"
+                title="Vendor Dashboard"
+              >
+                <Store className="w-3.5 h-3.5" />
+                <span>Vendor</span>
               </Link>
             )}
 
@@ -294,12 +327,22 @@ export const Header: React.FC<HeaderProps> = ({
                         </Link>
                         {isAdmin && (
                           <Link
-                            to="/admin/dashboard"
+                            to="/admin"
                             onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-colors"
                           >
                             <ShieldCheck className="w-4 h-4" />
                             Admin Panel
+                          </Link>
+                        )}
+                        {isVendor && (
+                          <Link
+                            to="/vendor/dashboard"
+                            onClick={() => setProfileOpen(false)}
+                            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/8 transition-colors"
+                          >
+                            <LayoutDashboard className="w-4 h-4" />
+                            Vendor Dashboard
                           </Link>
                         )}
                       </div>
@@ -308,11 +351,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="p-1.5 border-t border-slate-800/80">
                         <button
                           type="button"
-                          onClick={() => {
-                            localStorage.removeItem('vendora_active_user');
-                            setProfileOpen(false);
-                            window.location.href = '/';
-                          }}
+                          onClick={handleLogout}
                           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-rose-400 hover:bg-rose-500/8 transition-colors cursor-pointer"
                         >
                           <X className="w-4 h-4" />
@@ -401,13 +440,18 @@ export const Header: React.FC<HeaderProps> = ({
                       >
                         My Profile &amp; Orders
                       </Link>
+                      {isAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                        >
+                          🛡️ Admin Panel
+                        </Link>
+                      )}
                       <button
                         type="button"
-                        onClick={() => {
-                          localStorage.removeItem('vendora_active_user');
-                          setMobileMenuOpen(false);
-                          window.location.href = '/';
-                        }}
+                        onClick={handleLogout}
                         className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/8 transition-colors cursor-pointer"
                       >
                         Sign Out

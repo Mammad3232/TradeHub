@@ -28,14 +28,15 @@ interface AdminRouteProps {
 }
 
 export const AdminRoute: React.FC<AdminRouteProps> = ({ children, currentUser: propUser }) => {
-  // Option A: Prop-driven state
-  // Option B: LocalStorage fallback
-  const rawSession = localStorage.getItem('vendora_active_user');
+  const rawSession = localStorage.getItem('vendora_user') || localStorage.getItem('mockUser') || localStorage.getItem('vendora_active_user');
   const localUser: CurrentUser | null = rawSession ? JSON.parse(rawSession) : null;
 
   const activeUser = propUser ?? localUser;
 
-  // Strict Guard: If not logged in OR role is not 'Admin', redirect to '/'
+  // Fallback debug log to trace permission evaluation
+  console.log("AdminRoute Check:", activeUser);
+
+  // Guard: If not logged in OR role is not 'Admin', redirect to '/'
   if (!activeUser?.isLoggedIn || activeUser.role !== 'Admin') {
     return <Navigate to="/" replace />;
   }

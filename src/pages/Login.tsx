@@ -11,9 +11,17 @@ import {
   CheckCircle2,
   LockKeyhole,
 } from 'lucide-react';
+import { type CurrentUser, normalizeUser } from '../App';
 
-export const Login: React.FC = () => {
+interface LoginProps {
+  /** Called by App.tsx immediately after a successful login so React state updates without a page reload. */
+  onLogin?: (user: CurrentUser) => void;
+  handleLogin?: (user: CurrentUser) => void;
+}
+
+export const Login: React.FC<LoginProps> = ({ onLogin, handleLogin }) => {
   const navigate = useNavigate();
+  const loginCallback = handleLogin || onLogin;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,22 +35,28 @@ export const Login: React.FC = () => {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [lockoutTime, setLockoutTime] = useState(0); // in seconds
 
-  // Initialize: Load remembered email & Seed a default user for testing
+  // Initialize: Load remembered email & Seed default users for testing
   useEffect(() => {
     const dbRaw = localStorage.getItem('vendora_users');
     if (!dbRaw) {
       const defaultUsers = [
         {
-          name: 'Demo Admin',
+          name: 'Admin User',
           email: 'admin@vendora.store',
           password: 'Password123',
-          role: 'seller',
+          role: 'Admin',
+        },
+        {
+          name: 'Admin User',
+          email: 'admin@vendora.com',
+          password: 'Password123',
+          role: 'Admin',
         },
         {
           name: 'John Buyer',
           email: 'buyer@vendora.store',
           password: 'Password123',
-          role: 'buyer',
+          role: 'Customer',
         },
       ];
       localStorage.setItem('vendora_users', JSON.stringify(defaultUsers));
@@ -95,8 +109,8 @@ export const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    // Simulate API delay
-    await new Promise((r) => setTimeout(r, 1200));
+    // Simulate short API delay
+    await new Promise((r) => setTimeout(r, 600));
 
     const dbRaw = localStorage.getItem('vendora_users');
     const users = dbRaw ? JSON.parse(dbRaw) : [];
@@ -116,8 +130,7 @@ export const Login: React.FC = () => {
         setLockoutTime(30);
         return shake('Too many failed attempts. Please try again in 30 seconds.');
       } else {
-        const remaining = 3 - nextFailures;
-        return shake(`Invalid email or password. (${remaining} attempts remaining before lockout)`);
+        return shake('Invalid credentials');
       }
     }
 
@@ -127,10 +140,30 @@ export const Login: React.FC = () => {
       localStorage.removeItem('vendora_remember_email');
     }
 
-    localStorage.setItem('vendora_active_user', JSON.stringify(matchUser));
+    // Build a normalized CurrentUser from the raw DB record, then persist it
+    const rawUser = matchUser as Record<string, unknown>;
+    const sessionUser: CurrentUser = normalizeUser(rawUser) ?? {
+      isLoggedIn: true,
+      name:       String(rawUser.name ?? 'User'),
+      email:      String(rawUser.email ?? ''),
+      role:       rawUser.role === 'Admin' ? 'Admin' : 'Customer',
+    };
+
+    localStorage.setItem('vendora_user', JSON.stringify(sessionUser));
+    localStorage.setItem('mockUser', JSON.stringify(sessionUser));
+    localStorage.setItem('vendora_active_user', JSON.stringify(sessionUser));
+
+    // Immediately update App.tsx React state
+    if (loginCallback) loginCallback(sessionUser);
 
     setLoading(false);
-    navigate('/');
+
+    // Simple role-based redirect
+    if (sessionUser.role === 'Admin') {
+      navigate('/admin');
+    } else {
+      navigate('/');
+    }
   };
 
   const isLocked = lockoutTime > 0;
