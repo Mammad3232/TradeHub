@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Star, ShoppingCart, Heart, ArrowRight, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Star, ShoppingCart, Heart, ArrowRight, Check, Loader2 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { getProducts } from '../services/api';
 
 interface MockProduct {
   id: number;
@@ -99,8 +100,31 @@ const mockFeaturedProducts: MockProduct[] = [
 export const ProductGrid: React.FC = () => {
   const { addToCart, toggleWishlist, isWishlisted, pushToast, setMiniCartOpen } = useShop();
 
-  // Per-card "just added" flash state (local only, UI feedback)
+  const [products, setProducts] = useState<MockProduct[]>([]);
+  const [loading, setLoading] = useState(true);
   const [addedIds, setAddedIds] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    getProducts()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const mapped: MockProduct[] = data.map((p) => ({
+            id: p.id,
+            title: p.title,
+            brand: p.category.toUpperCase(),
+            category: p.category,
+            price: p.price,
+            rating: p.rating || 4.5,
+            image: p.image,
+          }));
+          setProducts(mapped);
+        } else {
+          setProducts(mockFeaturedProducts);
+        }
+      })
+      .catch(() => setProducts(mockFeaturedProducts))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleAddToCart = (product: MockProduct) => {
     addToCart({
@@ -161,8 +185,13 @@ export const ProductGrid: React.FC = () => {
         </div>
 
         {/* ── Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {mockFeaturedProducts.map((product) => {
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-purple-400">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {products.map((product) => {
             const wishlisted = isWishlisted(product.id);
             const justAdded  = !!addedIds[product.id];
 
@@ -278,6 +307,7 @@ export const ProductGrid: React.FC = () => {
             );
           })}
         </div>
+        )}
 
       </div>
     </section>

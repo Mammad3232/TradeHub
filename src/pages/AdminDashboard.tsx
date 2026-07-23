@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminVendors } from '../components/AdminVendors';
 import {
@@ -200,6 +201,7 @@ export interface AdminDashboardProps {
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, updateSiteSettings }) => {
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const { tab: urlTab } = useParams<{ tab?: string }>();
   const navigate = useNavigate();
 
@@ -216,6 +218,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
       setActiveTab(urlTab.toLowerCase() as ActiveTab);
     }
   }, [urlTab]);
+
+  // Fetch real dashboard stats from backend API
+  useEffect(() => {
+    getDashboardStats()
+      .then((data) => setDashboardStats(data))
+      .catch(() => { /* fall through to hardcoded fallbacks below */ });
+  }, []);
 
   const handleTabChange = (newTab: ActiveTab) => {
     setActiveTab(newTab);
@@ -389,11 +398,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
 
   // ── Chart Configs ────────────────────────────────────────────────────────────
 
+  // ── Live chart data from API (fallback to demo data if API not yet available)
   const doughnutData: ChartData<'doughnut'> = {
-    labels: ['Electronics', 'Fashion', 'Home Decor', 'Sports', 'Other'],
+    labels: dashboardStats?.categoryStats.map((c) => c.category) ?? ['Electronics', 'Fashion', 'Home', 'Sports', 'Other'],
     datasets: [
       {
-        data: [45, 25, 15, 10, 5],
+        data: dashboardStats?.categoryStats.map((c) => c.count) ?? [45, 25, 15, 10, 5],
         backgroundColor: ['#6366f1', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'],
         borderWidth: 1,
         borderColor: '#0f172a',
@@ -402,11 +412,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   };
 
   const barData: ChartData<'bar'> = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
+    labels: dashboardStats?.salesByDay.map((d) => d.day) ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
     datasets: [
       {
         label: 'Revenue ($)',
-        data: [12000, 19000, 15000, 24000, 32000, 28000, 42000],
+        data: dashboardStats?.salesByDay.map((d) => d.total) ?? [0, 0, 0, 0, 0, 0, 0],
         backgroundColor: '#ef4444',
         borderRadius: 8,
       },
@@ -492,12 +502,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         <div className="space-y-8 animate-in fade-in duration-200">
           {/* Top Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* Total Revenue — live from /api/dashboard/stats */}
             <div className="bg-[#111827] border border-slate-800 p-6 rounded-2xl flex items-center justify-between shadow-xl">
               <div className="space-y-1">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Revenue</span>
-                <p className="text-2xl font-bold text-white">$142,850.00</p>
+                <p className="text-2xl font-bold text-white">
+                  ${dashboardStats ? dashboardStats.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—'}
+                </p>
                 <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> +18.2% vs last month
+                  <TrendingUp className="w-3 h-3" /> Live platform GMV
                 </span>
               </div>
               <div className="bg-emerald-500/10 p-3.5 rounded-xl border border-emerald-500/20 text-emerald-400">
@@ -505,21 +518,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
               </div>
             </div>
 
+            {/* Total Products — live */}
             <div className="bg-[#111827] border border-slate-800 p-6 rounded-2xl flex items-center justify-between shadow-xl">
               <div className="space-y-1">
-                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Active Vendors</span>
-                <p className="text-2xl font-bold text-white">{vendors.length}</p>
-                <span className="text-xs text-indigo-400 font-semibold">Storefronts Online</span>
+                <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Active Products</span>
+                <p className="text-2xl font-bold text-white">{dashboardStats ? dashboardStats.totalProducts : vendors.length}</p>
+                <span className="text-xs text-indigo-400 font-semibold">Live Listings</span>
               </div>
               <div className="bg-indigo-500/10 p-3.5 rounded-xl border border-indigo-500/20 text-indigo-400">
-                <Store className="h-6 w-6" />
+                <Package className="h-6 w-6" />
               </div>
             </div>
 
+            {/* Total Users — live */}
             <div className="bg-[#111827] border border-slate-800 p-6 rounded-2xl flex items-center justify-between shadow-xl">
               <div className="space-y-1">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Users</span>
-                <p className="text-2xl font-bold text-white">{users.length}</p>
+                <p className="text-2xl font-bold text-white">{dashboardStats ? dashboardStats.totalUsers : users.length}</p>
                 <span className="text-xs text-purple-400 font-semibold">Registered Accounts</span>
               </div>
               <div className="bg-purple-500/10 p-3.5 rounded-xl border border-purple-500/20 text-purple-400">
@@ -527,10 +542,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
               </div>
             </div>
 
+            {/* Total Orders — live */}
             <div className="bg-[#111827] border border-slate-800 p-6 rounded-2xl flex items-center justify-between shadow-xl">
               <div className="space-y-1">
                 <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Orders</span>
-                <p className="text-2xl font-bold text-white">{orders.length}</p>
+                <p className="text-2xl font-bold text-white">{dashboardStats ? dashboardStats.totalOrders : orders.length}</p>
                 <span className="text-xs text-amber-400 font-semibold">Platform Transactions</span>
               </div>
               <div className="bg-amber-500/10 p-3.5 rounded-xl border border-amber-500/20 text-amber-400">

@@ -11,10 +11,10 @@ export const SearchResultsPage: React.FC = () => {
 
   // Filter products by title, vendorName, or category
   const filteredProducts = useMemo<Product[]>(() => {
-    if (!query.trim()) return mockProducts as Product[];
+    if (!query.trim()) return mockProducts as unknown as Product[];
     const term = query.toLowerCase().trim();
 
-    return (mockProducts as Product[]).filter((product) => {
+    return (mockProducts as unknown as Product[]).filter((product) => {
       const titleMatch = product.title.toLowerCase().includes(term);
       const categoryMatch = product.category.toLowerCase().includes(term);
       const vendorMatch = (product.vendorName || '').toLowerCase().includes(term);

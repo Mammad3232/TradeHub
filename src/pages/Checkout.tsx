@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, MapPin, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { useShop } from '../context/ShopContext';
+import { createOrder } from '../services/orderService';
 
 interface FormData {
   fullName: string;
@@ -31,6 +33,7 @@ interface PaymentErrors {
 }
 
 export const Checkout: React.FC = () => {
+  const { cartItems, clearCart } = useShop();
   const [step, setStep] = useState<'shipping' | 'payment' | 'success'>('shipping');
   const navigate = useNavigate();
 
@@ -223,14 +226,22 @@ export const Checkout: React.FC = () => {
 
     setIsProcessing(true);
 
-    // Simulate payment loading process
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    setIsProcessing(false);
-    setStep('success');
-    
-    // Redirect to orders
-    setTimeout(() => navigate('/my-orders'), 2500);
+    try {
+      if (cartItems.length > 0) {
+        const orderPayload = cartItems.map((item) => ({
+          productId: item.id,
+          quantity: item.quantity,
+        }));
+        await createOrder(orderPayload);
+        clearCart();
+      }
+      setIsProcessing(false);
+      setStep('success');
+      setTimeout(() => navigate('/my-orders'), 2500);
+    } catch (err: any) {
+      setIsProcessing(false);
+      alert(err.message || 'Failed to place order. Please try again.');
+    }
   };
 
   if (step === 'success') {

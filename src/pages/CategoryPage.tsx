@@ -21,10 +21,10 @@ export const CategoryPage: React.FC = () => {
 
   // Robust category matching using character normalization
   const filteredProducts = useMemo<Product[]>(() => {
-    if (!categoryName) return mockProducts as Product[];
+    if (!categoryName) return mockProducts as unknown as Product[];
     const normalizedTarget = normalizeCategory(categoryName);
     
-    return (mockProducts as Product[]).filter((p) => {
+    return (mockProducts as unknown as Product[]).filter((p) => {
       const normalizedPCat = normalizeCategory(p.category);
       return (
         normalizedPCat === normalizedTarget ||

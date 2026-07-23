@@ -1,22 +1,15 @@
-import productsData from '../mocks/products.json';
+import { getProducts as fetchProductsApi, type Product } from './productService';
 
-export interface Product {
-  id: number;
-  title: string;
-  price: number;
-  category: string;
-  vendorName: string;
-  image: string;
-  rating: number;
-}
+export type { Product };
 
 /**
- * Simulates a network call to fetch products with a 500ms delay.
+ * Legacy compatibility wrapper for getProducts()
  */
-export const getProducts = (): Promise<Product[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(productsData as Product[]);
-    }, 500);
-  });
+export const getProducts = async (): Promise<Product[]> => {
+  try {
+    return await fetchProductsApi();
+  } catch (err) {
+    console.error("Failed to fetch products from backend:", err);
+    return [];
+  }
 };

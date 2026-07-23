@@ -12,6 +12,7 @@ import {
   LockKeyhole,
 } from 'lucide-react';
 import { type CurrentUser, normalizeUser } from '../App';
+import { loginApi } from '../services/authService';
 
 interface LoginProps {
   /** Called by App.tsx immediately after a successful login so React state updates without a page reload. */
@@ -109,19 +110,36 @@ export const Login: React.FC<LoginProps> = ({ onLogin, handleLogin }) => {
     setError('');
     setLoading(true);
 
-    // Simulate short API delay
-    await new Promise((r) => setTimeout(r, 600));
+    try {
+      const authRes = await loginApi({ email: trimmedEmail, password });
 
-    const dbRaw = localStorage.getItem('vendora_users');
-    const users = dbRaw ? JSON.parse(dbRaw) : [];
+      if (rememberMe) {
+        localStorage.setItem('vendora_remember_email', trimmedEmail);
+      } else {
+        localStorage.removeItem('vendora_remember_email');
+      }
 
-    const matchUser = users.find(
-      (u: { email: string }) => u.email.toLowerCase() === trimmedEmail.toLowerCase()
-    );
+      const sessionUser: CurrentUser = {
+        isLoggedIn: true,
+        name: authRes.user.fullName,
+        email: authRes.user.email,
+        role: authRes.user.role as CurrentUser['role'],
+      };
 
-    const isPasswordCorrect = matchUser && matchUser.password === password;
+      localStorage.setItem('vendora_user', JSON.stringify(sessionUser));
+      localStorage.setItem('mockUser', JSON.stringify(sessionUser));
+      localStorage.setItem('vendora_active_user', JSON.stringify(sessionUser));
 
-    if (!isPasswordCorrect) {
+      if (loginCallback) loginCallback(sessionUser);
+
+      setLoading(false);
+
+      if (sessionUser.role === 'Admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    } catch (err: any) {
       setLoading(false);
       const nextFailures = failedAttempts + 1;
       setFailedAttempts(nextFailures);
@@ -130,39 +148,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin, handleLogin }) => {
         setLockoutTime(30);
         return shake('Too many failed attempts. Please try again in 30 seconds.');
       } else {
-        return shake('Invalid credentials');
+        return shake(err.message || 'Invalid email or password.');
       }
-    }
-
-    if (rememberMe) {
-      localStorage.setItem('vendora_remember_email', trimmedEmail);
-    } else {
-      localStorage.removeItem('vendora_remember_email');
-    }
-
-    // Build a normalized CurrentUser from the raw DB record, then persist it
-    const rawUser = matchUser as Record<string, unknown>;
-    const sessionUser: CurrentUser = normalizeUser(rawUser) ?? {
-      isLoggedIn: true,
-      name:       String(rawUser.name ?? 'User'),
-      email:      String(rawUser.email ?? ''),
-      role:       rawUser.role === 'Admin' ? 'Admin' : 'Customer',
-    };
-
-    localStorage.setItem('vendora_user', JSON.stringify(sessionUser));
-    localStorage.setItem('mockUser', JSON.stringify(sessionUser));
-    localStorage.setItem('vendora_active_user', JSON.stringify(sessionUser));
-
-    // Immediately update App.tsx React state
-    if (loginCallback) loginCallback(sessionUser);
-
-    setLoading(false);
-
-    // Simple role-based redirect
-    if (sessionUser.role === 'Admin') {
-      navigate('/admin');
-    } else {
-      navigate('/');
     }
   };
 

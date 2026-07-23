@@ -19,6 +19,7 @@ import {
   Trash2,
   KeyRound,
 } from 'lucide-react';
+import { getMyOrders } from '../services/orderService';
 
 interface OrderItem {
   id: string;
@@ -118,8 +119,41 @@ const statusStyles = {
 };
 
 export const MyOrders: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'personal' | 'orders' | 'addresses' | 'settings'>('settings');
+  const [activeTab, setActiveTab] = useState<'personal' | 'orders' | 'addresses' | 'settings'>('orders');
   const [trackingOrder, setTrackingOrder] = useState<Order | null>(null);
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    setLoadingOrders(true);
+    getMyOrders()
+      .then((data) => {
+        if (data && data.length > 0) {
+          const mapped: Order[] = data.map((o) => ({
+            id: `ORD-#${o.id}`,
+            placedDate: new Date(o.orderDate).toLocaleDateString('en-US', {
+              month: 'long',
+              day: 'numeric',
+              year: 'numeric',
+            }),
+            total: o.totalPrice,
+            shipTo: o.customerName || 'Customer',
+            status: o.status === 'Delivered' ? 'Delivered' : o.status === 'Shipped' ? 'In Transit' : 'In Transit',
+            statusDetails: `Status: ${o.status}`,
+            items: o.items.map((i) => ({
+              id: String(i.productId),
+              title: i.productName,
+              price: i.unitPrice,
+              image: i.productImage || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&auto=format&fit=crop&q=60',
+              category: 'Item',
+            })),
+          }));
+          setOrders(mapped);
+        }
+      })
+      .catch(() => setOrders(mockOrders))
+      .finally(() => setLoadingOrders(false));
+  }, []);
 
   // User profile state
   const [userProfile, setUserProfile] = useState({

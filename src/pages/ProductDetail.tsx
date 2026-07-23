@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,9 +15,11 @@ import {
   Sparkles,
   Maximize2,
   Check,
+  Loader2,
 } from 'lucide-react';
 import productsData from '../mocks/products.json';
 import { useShop } from '../context/ShopContext';
+import { getProductById } from '../services/productService';
 
 interface Review {
   id: number;
@@ -60,18 +62,38 @@ export const ProductDetail: React.FC = () => {
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, wishlistItems, pushToast } = useShop();
 
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [quantity, setQuantity] = useState<number>(1);
   const [addedToCart, setAddedToCart] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'description' | 'specifications' | 'reviews'>('description');
   const [activeColor, setActiveColor] = useState<string>('Space Black');
   const [activeSize, setActiveSize] = useState<string>('256GB');
-  
-  // Find product by id
-  const product = productsData.find((p) => String(p.id) === String(id)) || productsData[0];
+
+  useEffect(() => {
+    if (id) {
+      setLoading(true);
+      getProductById(Number(id))
+        .then((data) => setProduct(data))
+        .catch(() => {
+          const fallback = productsData.find((p) => String(p.id) === String(id)) || productsData[0];
+          setProduct(fallback);
+        })
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
+
+  if (loading || !product) {
+    return (
+      <div className="min-h-screen bg-[#060913] flex items-center justify-center text-purple-400">
+        <Loader2 className="w-10 h-10 animate-spin" />
+      </div>
+    );
+  }
 
   // Set alternative gallery images depending on product image
   const galleryImages = [
-    product.image,
+    product.image || product.imageUrl,
     'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=600&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=600&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&auto=format&fit=crop&q=80',

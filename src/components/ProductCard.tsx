@@ -90,7 +90,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             to={`/vendor/dashboard`}
             className="font-medium hover:text-indigo-400 transition-colors truncate"
           >
-            {product.vendorName}
+            {product.vendorName || product.category || 'Vendora Store'}
           </Link>
         </div>
 

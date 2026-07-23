@@ -15,6 +15,7 @@ import {
   Check,
   X,
 } from 'lucide-react';
+import { registerApi } from '../services/authService';
 
 type Role = 'buyer' | 'seller';
 
@@ -88,34 +89,21 @@ export const Register: React.FC = () => {
     setError('');
     setLoading(true);
 
-    // Simulated API delay
-    await new Promise((r) => setTimeout(r, 1200));
+    try {
+      await registerApi({
+        fullName: trimmedName,
+        email: trimmedEmail,
+        password: form.password,
+        role: form.role === 'seller' ? 'Vendor' : 'Customer',
+      });
 
-    const existingUsersRaw = localStorage.getItem('vendora_users');
-    const existingUsers = existingUsersRaw ? JSON.parse(existingUsersRaw) : [];
-
-    const emailExists = existingUsers.some(
-      (u: { email: string }) => u.email.toLowerCase() === trimmedEmail.toLowerCase()
-    );
-
-    if (emailExists) {
       setLoading(false);
-      return shake('An account with this email already exists.');
+      setSuccess(true);
+      setTimeout(() => navigate('/login'), 1500);
+    } catch (err: any) {
+      setLoading(false);
+      return shake(err.message || 'Registration failed. Please try again.');
     }
-
-    const newUser = {
-      name: trimmedName,
-      email: trimmedEmail,
-      password: form.password,
-      role: form.role,
-    };
-
-    existingUsers.push(newUser);
-    localStorage.setItem('vendora_users', JSON.stringify(existingUsers));
-
-    setLoading(false);
-    setSuccess(true);
-    setTimeout(() => navigate('/login'), 1500);
   };
 
   if (success) {
