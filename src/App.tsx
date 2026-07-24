@@ -144,6 +144,7 @@ const AdminLayout: React.FC<LayoutProps> = ({ currentUser, siteSettings, onSignO
 // ── App ───────────────────────────────────────────────────────────────────────
 
 import { ShopProvider } from './context/ShopContext';
+import { logoutApi } from './services/authService';
 
 function App() {
   /**
@@ -202,14 +203,12 @@ function App() {
 
   // ── Sign Out Handler
   const handleSignOut = () => {
+    logoutApi(); // clears tradehub_token + all legacy session keys
     setCurrentUser({
       isLoggedIn: false,
       name:       '',
       role:       'Guest',
     });
-    localStorage.removeItem('vendora_user');
-    localStorage.removeItem('mockUser');
-    localStorage.removeItem('vendora_active_user');
   };
 
   return (

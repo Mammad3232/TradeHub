@@ -444,6 +444,102 @@ namespace TradeHub.API.Migrations
                         },
                         new
                         {
+                            Id = 21,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 2, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "True wireless earbuds with spatial audio, IPX7 water resistance, and wireless charging case.",
+                            ImageUrl = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Orion Pro ANC Earbuds",
+                            Price = 189.99m,
+                            StockQuantity = 110
+                        },
+                        new
+                        {
+                            Id = 22,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 3, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Ultra-lightweight gaming mouse with 26K DPI optical sensor and PTFE feet.",
+                            ImageUrl = "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Apex Precision Wireless Mouse",
+                            Price = 79.99m,
+                            StockQuantity = 140
+                        },
+                        new
+                        {
+                            Id = 23,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "360-degree immersive sound with deep bass, 24-hour playtime, and IP67 dust/water rating.",
+                            ImageUrl = "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "CinemaSound Portable Bluetooth Speaker",
+                            Price = 119.00m,
+                            StockQuantity = 95
+                        },
+                        new
+                        {
+                            Id = 24,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Ultra-compact fast charger for laptops, tablets, and phones simultaneously.",
+                            ImageUrl = "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Nexus 100W Multi-Port USB-C GaN Charger",
+                            Price = 69.50m,
+                            StockQuantity = 180
+                        },
+                        new
+                        {
+                            Id = 25,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Screen-bar monitor light with dual ambient backlighting and smart auto-dimming sensor.",
+                            ImageUrl = "https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Aura Desk RGB Smart Ambient Lightbar",
+                            Price = 89.99m,
+                            StockQuantity = 70
+                        },
+                        new
+                        {
+                            Id = 26,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 7, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "1080p 60fps streaming webcam with autofocus, dual noise-canceling mics, and privacy shutter.",
+                            ImageUrl = "https://images.unsplash.com/photo-1587826080692-f439cd0b70da?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "StreamCraft HD Pro Web Camera 1080p",
+                            Price = 99.00m,
+                            StockQuantity = 65
+                        },
+                        new
+                        {
+                            Id = 27,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Rugged aluminum external SSD with read speeds up to 2000MB/s and drop protection.",
+                            ImageUrl = "https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "TitanShield 2TB NVMe Portable SSD",
+                            Price = 179.99m,
+                            StockQuantity = 85
+                        },
+                        new
+                        {
+                            Id = 28,
+                            CategoryId = 1,
+                            CreatedAt = new DateTime(2026, 2, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Adjustable aluminum laptop riser with built-in quiet dual cooling fans.",
+                            ImageUrl = "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "VaporCool Ergonomic Laptop Stand",
+                            Price = 49.99m,
+                            StockQuantity = 130
+                        },
+                        new
+                        {
                             Id = 5,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -477,6 +573,78 @@ namespace TradeHub.API.Migrations
                             Name = "Classic Oxford Button-Down Shirt",
                             Price = 79.00m,
                             StockQuantity = 200
+                        },
+                        new
+                        {
+                            Id = 29,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Elegant mid-length wool trench coat with double-breasted button closure.",
+                            ImageUrl = "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Nordic Minimalist Wool Blend Coat",
+                            Price = 219.00m,
+                            StockQuantity = 40
+                        },
+                        new
+                        {
+                            Id = 30,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 12, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Handmade 100% Mulberry silk tie set with matching pocket square and cuff links.",
+                            ImageUrl = "https://images.unsplash.com/photo-1589756823695-278bc923f962?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Heritage Italian Silk Necktie Set",
+                            Price = 59.99m,
+                            StockQuantity = 90
+                        },
+                        new
+                        {
+                            Id = 31,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Titanium frame sunglasses with TAC 100% UV400 anti-glare polarized lenses.",
+                            ImageUrl = "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Vanguard Aviator Polarized Sunglasses",
+                            Price = 139.00m,
+                            StockQuantity = 75
+                        },
+                        new
+                        {
+                            Id = 32,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 14, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Water-resistant heavy canvas weekender travel bag with genuine leather trim.",
+                            ImageUrl = "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Urban Commuter Canvas Duffle Bag",
+                            Price = 109.50m,
+                            StockQuantity = 60
+                        },
+                        new
+                        {
+                            Id = 33,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Ultra-soft 100% Mongolian cashmere crewneck sweater for cold weather warmth.",
+                            ImageUrl = "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "AeroSoft Cashmere Knit Sweater",
+                            Price = 169.00m,
+                            StockQuantity = 50
+                        },
+                        new
+                        {
+                            Id = 34,
+                            CategoryId = 2,
+                            CreatedAt = new DateTime(2026, 2, 16, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Sapphire crystal glass timepiece with 21-jewel Japanese automatic movement.",
+                            ImageUrl = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Chronos Automatic Minimalist Wristwatch",
+                            Price = 289.00m,
+                            StockQuantity = 30
                         },
                         new
                         {
@@ -516,13 +684,73 @@ namespace TradeHub.API.Migrations
                         },
                         new
                         {
+                            Id = 35,
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 3, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Soft cotton woven throw blanket with fringe detail, perfect for sofa styling.",
+                            ImageUrl = "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Zenith Hand-Woven Boho Throw Blanket",
+                            Price = 49.99m,
+                            StockQuantity = 110
+                        },
+                        new
+                        {
+                            Id = 36,
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 3, 12, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Set of 3 matte textured stoneware vases designed for pampas grass and dried blooms.",
+                            ImageUrl = "https://images.unsplash.com/photo-1612196808214-b7e239e5f6b7?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Artisan Ceramic Flower Vase Trio",
+                            Price = 64.00m,
+                            StockQuantity = 85
+                        },
+                        new
+                        {
+                            Id = 37,
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 3, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Silent non-ticking sweep movement clock crafted from natural solid teak wood.",
+                            ImageUrl = "https://images.unsplash.com/photo-1563861826100-9cb868fdbe1c?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Mid-Century Wooden Wall Clock 12\"",
+                            Price = 55.00m,
+                            StockQuantity = 95
+                        },
+                        new
+                        {
+                            Id = 38,
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 3, 14, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Hand-poured soy candle with notes of cedarwood, amber, and wild lavender in a glass jar.",
+                            ImageUrl = "https://images.unsplash.com/photo-1603006905003-be475563bc59?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Botanical Soy Wax Scented Candle",
+                            Price = 28.50m,
+                            StockQuantity = 200
+                        },
+                        new
+                        {
+                            Id = 39,
+                            CategoryId = 3,
+                            CreatedAt = new DateTime(2026, 3, 15, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Set of 2 heavy-duty oak floating shelves with hidden mounting brackets.",
+                            ImageUrl = "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Minimalist Floating Wooden Wall Shelves",
+                            Price = 74.99m,
+                            StockQuantity = 65
+                        },
+                        new
+                        {
                             Id = 11,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 3, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "In-depth guide covering distributed systems, microservices, event-driven architecture, and cloud-native patterns.",
                             ImageUrl = "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&auto=format&fit=crop&q=60",
                             IsActive = true,
-                            Name = "Modern Web Architecture & Systems (Hardcover)",
+                            Name = "Modern Web Architecture & Systems",
                             Price = 39.99m,
                             StockQuantity = 150
                         },
@@ -549,6 +777,66 @@ namespace TradeHub.API.Migrations
                             Name = "Clean Code: A Handbook of Agile Craftsmanship",
                             Price = 44.99m,
                             StockQuantity = 85
+                        },
+                        new
+                        {
+                            Id = 40,
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 4, 6, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Comprehensive technical reference on advanced C# language features, async programming, and memory tuning.",
+                            ImageUrl = "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Mastering C# 12 & .NET 9 High Performance",
+                            Price = 59.99m,
+                            StockQuantity = 120
+                        },
+                        new
+                        {
+                            Id = 41,
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 4, 7, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Peter Thiel's groundbreaking book on how to build companies that create new things.",
+                            ImageUrl = "https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Zero to One: Notes on Startups and Future",
+                            Price = 27.00m,
+                            StockQuantity = 175
+                        },
+                        new
+                        {
+                            Id = 42,
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 4, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "James Clear's framework for improving every day through tiny changes and system building.",
+                            ImageUrl = "https://images.unsplash.com/photo-1589829085413-56de8ae18c73?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Atomic Habits: An Easy & Proven Way",
+                            Price = 24.99m,
+                            StockQuantity = 220
+                        },
+                        new
+                        {
+                            Id = 43,
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 4, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Martin Kleppmann's authoritative guide to data systems architecture, scalability, and fault tolerance.",
+                            ImageUrl = "https://images.unsplash.com/photo-1516979187457-637abb4f9353?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Designing Data-Intensive Applications",
+                            Price = 54.50m,
+                            StockQuantity = 90
+                        },
+                        new
+                        {
+                            Id = 44,
+                            CategoryId = 4,
+                            CreatedAt = new DateTime(2026, 4, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Timeless lessons on wealth, greed, and happiness by Morgan Housel.",
+                            ImageUrl = "https://images.unsplash.com/photo-1553729459-efe14ef6055d?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "The Psychology of Money",
+                            Price = 22.00m,
+                            StockQuantity = 140
                         },
                         new
                         {
@@ -600,6 +888,54 @@ namespace TradeHub.API.Migrations
                         },
                         new
                         {
+                            Id = 45,
+                            CategoryId = 5,
+                            CreatedAt = new DateTime(2026, 5, 6, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Extra thick non-slip alignment yoga mat with carrying strap.",
+                            ImageUrl = "https://images.unsplash.com/photo-1601925260368-ae2f83cf8b7f?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "FlexCore Eco-Friendly TPE Yoga Mat 6mm",
+                            Price = 42.50m,
+                            StockQuantity = 130
+                        },
+                        new
+                        {
+                            Id = 46,
+                            CategoryId = 5,
+                            CreatedAt = new DateTime(2026, 5, 7, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Tangle-free steel cable speed jump rope with aluminum anti-slip handles.",
+                            ImageUrl = "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Pulse Speed Bearing Skipping Jump Rope",
+                            Price = 19.99m,
+                            StockQuantity = 190
+                        },
+                        new
+                        {
+                            Id = 47,
+                            CategoryId = 5,
+                            CreatedAt = new DateTime(2026, 5, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Powerful brushless motor muscle recovery massage gun with 6 interchangeable heads.",
+                            ImageUrl = "https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "TheraGun Deep Tissue Percussion Massager",
+                            Price = 149.00m,
+                            StockQuantity = 70
+                        },
+                        new
+                        {
+                            Id = 48,
+                            CategoryId = 5,
+                            CreatedAt = new DateTime(2026, 5, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Double-wall vacuum insulated water bottle keeping drinks cold for 24 hours.",
+                            ImageUrl = "https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "HydroMax 1.5L Insulated Stainless Steel Bottle",
+                            Price = 38.00m,
+                            StockQuantity = 160
+                        },
+                        new
+                        {
                             Id = 18,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 10, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -633,6 +969,314 @@ namespace TradeHub.API.Migrations
                             Name = "Matcha Ceremonial Grade (100g Tin)",
                             Price = 42.00m,
                             StockQuantity = 180
+                        },
+                        new
+                        {
+                            Id = 49,
+                            CategoryId = 6,
+                            CreatedAt = new DateTime(2026, 5, 21, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Steeped for 24 hours from organic specialty Arabica beans. Bold, smooth, and low acidity.",
+                            ImageUrl = "https://images.unsplash.com/photo-1517701604599-bb29b565090c?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Artisan Cold Brew Coffee Concentrate (1L)",
+                            Price = 18.99m,
+                            StockQuantity = 140
+                        },
+                        new
+                        {
+                            Id = 50,
+                            CategoryId = 6,
+                            CreatedAt = new DateTime(2026, 5, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Refreshing sparkling tonic infused with ashwagandha, elderberry, and hibiscus.",
+                            ImageUrl = "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Sparkling Botanical Adaptogen Tonic 12-Pack",
+                            Price = 36.00m,
+                            StockQuantity = 110
+                        },
+                        new
+                        {
+                            Id = 51,
+                            CategoryId = 6,
+                            CreatedAt = new DateTime(2026, 5, 23, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Warming blend of organic turmeric, ginger, cinnamon, and black pepper for golden milk.",
+                            ImageUrl = "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Golden Milk Turmeric Latte Blend (250g)",
+                            Price = 22.50m,
+                            StockQuantity = 150
+                        },
+                        new
+                        {
+                            Id = 52,
+                            CategoryId = 6,
+                            CreatedAt = new DateTime(2026, 5, 24, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Description = "Upcycled dried coffee cherries delivering a sweet, fruity tea rich in antioxidants.",
+                            ImageUrl = "https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=800&auto=format&fit=crop&q=60",
+                            IsActive = true,
+                            Name = "Pure Cascara Coffee Cherry Tea (200g)",
+                            Price = 19.50m,
+                            StockQuantity = 120
+                        });
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.Review", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Reviews");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Comment = "The active noise cancellation is unreal! Worth every penny.",
+                            CreatedAt = new DateTime(2026, 6, 1, 10, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 1,
+                            Rating = 5,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Comment = "Super comfortable for long coding sessions. Battery lasts for days.",
+                            CreatedAt = new DateTime(2026, 6, 5, 14, 30, 0, 0, DateTimeKind.Utc),
+                            ProductId = 1,
+                            Rating = 5,
+                            UserId = 14
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Comment = "Tactile feel is great. RGB software could be slightly better.",
+                            CreatedAt = new DateTime(2026, 6, 6, 11, 20, 0, 0, DateTimeKind.Utc),
+                            ProductId = 2,
+                            Rating = 4,
+                            UserId = 15
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Comment = "Colors are vibrant and 144Hz makes everything buttery smooth.",
+                            CreatedAt = new DateTime(2026, 6, 8, 16, 45, 0, 0, DateTimeKind.Utc),
+                            ProductId = 3,
+                            Rating = 5,
+                            UserId = 16
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Comment = "Sleep tracking insights helped me improve my bedtime routine significantly.",
+                            CreatedAt = new DateTime(2026, 6, 10, 9, 15, 0, 0, DateTimeKind.Utc),
+                            ProductId = 4,
+                            Rating = 5,
+                            UserId = 17
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Comment = "Genuine leather smelling amazing. Fits like a glove!",
+                            CreatedAt = new DateTime(2026, 6, 12, 18, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 5,
+                            Rating = 5,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Comment = "Very lightweight shoes, perfect for daily morning runs.",
+                            CreatedAt = new DateTime(2026, 6, 14, 8, 30, 0, 0, DateTimeKind.Utc),
+                            ProductId = 6,
+                            Rating = 4,
+                            UserId = 14
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Comment = "Fabric quality is superb. Doesn't wrinkle easily after wash.",
+                            CreatedAt = new DateTime(2026, 6, 15, 12, 10, 0, 0, DateTimeKind.Utc),
+                            ProductId = 7,
+                            Rating = 5,
+                            UserId = 15
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Comment = "App control is super seamless. Love the warmth modes for nighttime.",
+                            CreatedAt = new DateTime(2026, 6, 18, 20, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 8,
+                            Rating = 5,
+                            UserId = 16
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Comment = "Fills the living room with nice lavender scent in minutes.",
+                            CreatedAt = new DateTime(2026, 6, 20, 15, 20, 0, 0, DateTimeKind.Utc),
+                            ProductId = 9,
+                            Rating = 4,
+                            UserId = 17
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Comment = "Must-read for modern backend developers. Clear code examples.",
+                            CreatedAt = new DateTime(2026, 6, 22, 13, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 11,
+                            Rating = 5,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Comment = "A timeless classic. Changed how I structure my C# methods.",
+                            CreatedAt = new DateTime(2026, 6, 24, 17, 30, 0, 0, DateTimeKind.Utc),
+                            ProductId = 13,
+                            Rating = 5,
+                            UserId = 14
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Comment = "Heft and grip are perfect. No chemical smell on the rubber.",
+                            CreatedAt = new DateTime(2026, 6, 25, 9, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 14,
+                            Rating = 5,
+                            UserId = 15
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Comment = "Rich crema and smooth dark chocolate notes. Best morning espresso!",
+                            CreatedAt = new DateTime(2026, 6, 28, 7, 45, 0, 0, DateTimeKind.Utc),
+                            ProductId = 18,
+                            Rating = 5,
+                            UserId = 16
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Comment = "Vibrant bright green color, zero bitterness. High quality grade.",
+                            CreatedAt = new DateTime(2026, 6, 29, 10, 10, 0, 0, DateTimeKind.Utc),
+                            ProductId = 20,
+                            Rating = 5,
+                            UserId = 17
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Comment = "Noise isolation rivals over-ear models. Bass response is crisp.",
+                            CreatedAt = new DateTime(2026, 7, 1, 14, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 21,
+                            Rating = 5,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Comment = "Mouse sensor is spot-on for FPS games. Glides effortlessly.",
+                            CreatedAt = new DateTime(2026, 7, 2, 19, 20, 0, 0, DateTimeKind.Utc),
+                            ProductId = 22,
+                            Rating = 4,
+                            UserId = 14
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Comment = "Charges my MacBook and phone at full speed from one wall plug.",
+                            CreatedAt = new DateTime(2026, 7, 5, 11, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 24,
+                            Rating = 5,
+                            UserId = 15
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Comment = "Heavy wool blend keeps me warm in freezing wind. Top tier craftsmanship.",
+                            CreatedAt = new DateTime(2026, 7, 7, 16, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 29,
+                            Rating = 5,
+                            UserId = 16
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Comment = "The automatic rotor movement is visible through back case. Stunning watch.",
+                            CreatedAt = new DateTime(2026, 7, 9, 21, 30, 0, 0, DateTimeKind.Utc),
+                            ProductId = 34,
+                            Rating = 5,
+                            UserId = 17
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Comment = "Beautiful minimalist aesthetic for my dining table setup.",
+                            CreatedAt = new DateTime(2026, 7, 11, 13, 10, 0, 0, DateTimeKind.Utc),
+                            ProductId = 36,
+                            Rating = 4,
+                            UserId = 3
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Comment = "Deep dive into .NET 9 performance tuning. Highly recommended!",
+                            CreatedAt = new DateTime(2026, 7, 12, 15, 45, 0, 0, DateTimeKind.Utc),
+                            ProductId = 40,
+                            Rating = 5,
+                            UserId = 14
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Comment = "Life-changing practical advice on habit formation.",
+                            CreatedAt = new DateTime(2026, 7, 14, 18, 0, 0, 0, DateTimeKind.Utc),
+                            ProductId = 42,
+                            Rating = 5,
+                            UserId = 15
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Comment = "Melts away leg soreness after intense leg day workouts.",
+                            CreatedAt = new DateTime(2026, 7, 16, 20, 15, 0, 0, DateTimeKind.Utc),
+                            ProductId = 47,
+                            Rating = 5,
+                            UserId = 16
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Comment = "Smooth cold brew with zero harshness. Add oat milk for perfection.",
+                            CreatedAt = new DateTime(2026, 7, 18, 8, 30, 0, 0, DateTimeKind.Utc),
+                            ProductId = 49,
+                            Rating = 5,
+                            UserId = 17
                         });
                 });
 
@@ -679,7 +1323,7 @@ namespace TradeHub.API.Migrations
                             CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "admin@vendora.store",
                             FullName = "Admin User",
-                            PasswordHash = "$2a$11$5k5RfW7HkXfDGt8L.V1AZOQtJSvDz3FMK4l0B3f1Rr3DxBR2CzCaO",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
                             Role = "Admin"
                         },
                         new
@@ -687,8 +1331,98 @@ namespace TradeHub.API.Migrations
                             Id = 2,
                             CreatedAt = new DateTime(2026, 1, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "vendor@vendora.store",
-                            FullName = "Vendor One",
-                            PasswordHash = "$2a$11$5k5RfW7HkXfDGt8L.V1AZOQtJSvDz3FMK4l0B3f1Rr3DxBR2CzCaO",
+                            FullName = "Vendor One Store",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CreatedAt = new DateTime(2026, 1, 6, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "techworld@vendor.store",
+                            FullName = "TechWorld Electronics",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CreatedAt = new DateTime(2026, 1, 7, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "apexapparel@vendor.store",
+                            FullName = "Apex Apparel Co",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CreatedAt = new DateTime(2026, 1, 8, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "lumina@vendor.store",
+                            FullName = "Lumina Home & Living",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CreatedAt = new DateTime(2026, 1, 9, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "bookhaven@vendor.store",
+                            FullName = "BookHaven Publishing",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CreatedAt = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "fitpulse@vendor.store",
+                            FullName = "FitPulse Athletics",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CreatedAt = new DateTime(2026, 1, 11, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "artisan@vendor.store",
+                            FullName = "Artisan Roasters",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CreatedAt = new DateTime(2026, 1, 12, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "nordic@vendor.store",
+                            FullName = "Nordic Design Studio",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CreatedAt = new DateTime(2026, 1, 13, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "cyberedge@vendor.store",
+                            FullName = "CyberEdge Gaming Labs",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CreatedAt = new DateTime(2026, 1, 14, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "ecostyle@vendor.store",
+                            FullName = "EcoStyle Sustainable",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Vendor"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CreatedAt = new DateTime(2026, 1, 15, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "zenith@vendor.store",
+                            FullName = "Zenith Acoustics",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
                             Role = "Vendor"
                         },
                         new
@@ -697,7 +1431,43 @@ namespace TradeHub.API.Migrations
                             CreatedAt = new DateTime(2026, 1, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Email = "buyer@vendora.store",
                             FullName = "John Buyer",
-                            PasswordHash = "$2a$11$5k5RfW7HkXfDGt8L.V1AZOQtJSvDz3FMK4l0B3f1Rr3DxBR2CzCaO",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Customer"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CreatedAt = new DateTime(2026, 1, 18, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "alice@buyer.com",
+                            FullName = "Alice Vance",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Customer"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CreatedAt = new DateTime(2026, 1, 20, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "bob@buyer.com",
+                            FullName = "Bob Smith",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Customer"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CreatedAt = new DateTime(2026, 1, 22, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "charlie@buyer.com",
+                            FullName = "Charlie Brown",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
+                            Role = "Customer"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            CreatedAt = new DateTime(2026, 1, 25, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "diana@buyer.com",
+                            FullName = "Diana Prince",
+                            PasswordHash = "$2a$11$imqp6dZtk9JTXGF99nHQeOG4a8Rn9JrnT0omiuOmTMHH31ukONRlG",
                             Role = "Customer"
                         });
                 });
@@ -743,6 +1513,25 @@ namespace TradeHub.API.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.Review", b =>
+                {
+                    b.HasOne("TradeHub.API.Models.Product", "Product")
+                        .WithMany("Reviews")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TradeHub.API.Models.User", "User")
+                        .WithMany("Reviews")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Category", b =>
                 {
                     b.Navigation("Products");
@@ -756,11 +1545,15 @@ namespace TradeHub.API.Migrations
             modelBuilder.Entity("TradeHub.API.Models.Product", b =>
                 {
                     b.Navigation("OrderItems");
+
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.User", b =>
                 {
                     b.Navigation("Orders");
+
+                    b.Navigation("Reviews");
                 });
 #pragma warning restore 612, 618
         }

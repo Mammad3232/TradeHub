@@ -52,18 +52,17 @@ builder.Services.AddAuthentication(options =>
 });
 
 // ── 4. CORS Policy ─────────────────────────────────────────────────────────────
+// AllowAnyOrigin is used for local development so that any Vite port works.
+// NOTE: AllowAnyOrigin and AllowCredentials are mutually exclusive in ASP.NET Core —
+// using both will cause a runtime exception. For production, replace AllowAnyOrigin
+// with a specific allow-list and add .AllowCredentials().
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:3000"
-              )
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+              .AllowAnyMethod();
     });
 });
 
@@ -103,6 +102,11 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// ── Middleware Pipeline ───────────────────────────────────────────────────────
+// 1. CORS MUST be the very first middleware so headers are attached to all responses (including errors/redirects)
+app.UseCors("AllowFrontend");
+
+// 2. Global Exception Handling
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 if (app.Environment.IsDevelopment())
@@ -110,9 +114,11 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+else
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseHttpsRedirection();
-app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

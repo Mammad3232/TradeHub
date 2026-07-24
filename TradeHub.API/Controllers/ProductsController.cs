@@ -46,9 +46,9 @@ public class ProductsController : ControllerBase
         return Ok(ApiResponse<ProductResponseDto>.Ok(product));
     }
 
-    /// <summary>Create a new product. Admin only.</summary>
+    /// <summary>Create a new product. Admins and Vendors only.</summary>
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Vendor")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -66,9 +66,9 @@ public class ProductsController : ControllerBase
             ApiResponse<ProductResponseDto>.Ok(created, "Product created successfully."));
     }
 
-    /// <summary>Update a product. Admin only.</summary>
+    /// <summary>Update a product. Admins and Vendors only.</summary>
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Vendor")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponseDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateProductDto dto)
@@ -83,9 +83,9 @@ public class ProductsController : ControllerBase
         return Ok(ApiResponse<ProductResponseDto>.Ok(updated, "Product updated successfully."));
     }
 
-    /// <summary>Soft-delete a product (sets IsActive=false). Admin only.</summary>
+    /// <summary>Soft-delete a product (sets IsActive=false). Admins and Vendors only.</summary>
     [HttpDelete("{id:int}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Vendor")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(int id)

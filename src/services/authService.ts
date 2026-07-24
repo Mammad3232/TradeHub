@@ -41,7 +41,7 @@ export const registerApi = async (data: RegisterParams): Promise<AuthResponse> =
 };
 
 export const logoutApi = (): void => {
-  localStorage.removeItem('tradehub_token');
+  localStorage.removeItem('tradehub_token');       // JWT — must be cleared first
   localStorage.removeItem('vendora_user');
   localStorage.removeItem('mockUser');
   localStorage.removeItem('vendora_active_user');

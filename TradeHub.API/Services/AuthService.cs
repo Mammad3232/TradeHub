@@ -26,11 +26,13 @@ public class AuthService : IAuthService
         if (await _userRepo.EmailExistsAsync(dto.Email))
             throw new InvalidOperationException("An account with this email address already exists.");
 
-        // Determine role — only allow Admin assignment if explicitly set and system allows it.
-        // For public registration, always default to Customer.
+        // Parse the requested role from the DTO; default to Customer if missing or unrecognised.
         var role = UserRole.Customer;
-        if (!string.IsNullOrEmpty(dto.Role) && dto.Role.Equals("Vendor", StringComparison.OrdinalIgnoreCase))
-            role = UserRole.Vendor;
+        if (!string.IsNullOrEmpty(dto.Role) &&
+            Enum.TryParse<UserRole>(dto.Role, ignoreCase: true, out var parsedRole))
+        {
+            role = parsedRole;
+        }
 
         // Hash the password with BCrypt (cost factor 11 — strong but still fast)
         var user = new User

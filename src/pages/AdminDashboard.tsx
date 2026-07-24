@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
+import { AddProductModal } from '../components/AddProductModal';
+import { getProducts, type Product as ApiProduct } from '../services/productService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminVendors } from '../components/AdminVendors';
 import {
@@ -262,7 +264,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
 
   const [orders, setOrders] = useState<OrderItem[]>(initialOrders);
   const [brands] = useState<Brand[]>(initialBrands);
-  const [products] = useState<Product[]>(initialProducts);
+
+  // Products — seeded with mock data; updated from API after each successful creation
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+
+  // Add Product Modal
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+
+  // Re-fetch the live product list and merge into local state
+  const handleProductCreated = useCallback(() => {
+    getProducts()
+      .then((apiProducts: ApiProduct[]) => {
+        // Map API shape → local Product shape used by the table
+        const mapped: Product[] = apiProducts.map((p) => ({
+          id: p.id,
+          name: p.title,
+          price: p.price,
+          stock: p.stockQuantity,
+          vendor: 'TradeHub',
+          category: p.category,
+          status: p.isActive
+            ? p.stockQuantity === 0
+              ? 'Out of Stock'
+              : 'Active'
+            : 'Draft',
+        }));
+        setProducts(mapped);
+      })
+      .catch(() => { /* keep existing list on error */ });
+  }, []);
   const [permissions, setPermissions] = useState<PermissionRule[]>(initialPermissions);
 
   // Add User Modal State
@@ -458,7 +488,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         {activeTab === 'products' && (
           <button
             type="button"
-            onClick={() => alert('Add Product form / modal')}
+            id="open-add-product-modal"
+            onClick={() => setIsAddProductModalOpen(true)}
             className="hidden sm:inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all shadow-lg shadow-red-600/20 cursor-pointer"
           >
             <Package className="w-4 h-4" />
@@ -1329,6 +1360,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
           </div>
         </div>
       )}
+
+      {/* ════════════ ADD PRODUCT MODAL ════════════ */}
+      <AddProductModal
+        isOpen={isAddProductModalOpen}
+        onClose={() => setIsAddProductModalOpen(false)}
+        onSuccess={handleProductCreated}
+      />
     </div>
   );
 };

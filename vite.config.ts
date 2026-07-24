@@ -8,4 +8,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    watch: {
+      // Prevent Vite from watching backend build artifacts (avoids EBUSY errors on Windows)
+      ignored: [
+        '**/TradeHub.API/**',
+        '**/obj/**',
+        '**/bin/**',
+      ],
+    },
+  },
 })
+

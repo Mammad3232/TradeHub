@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Development environment API base URL
-const API_BASE_URL = 'http://localhost:5157/api';
+const API_BASE_URL = 'http://localhost:5229/api';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -35,6 +35,17 @@ apiClient.interceptors.response.use(
     return response.data;
   },
   (error) => {
+    // 401 Unauthorized — token expired or invalid: clear session and redirect to login
+    if (error.response?.status === 401) {
+      localStorage.removeItem('tradehub_token');
+      localStorage.removeItem('vendora_user');
+      localStorage.removeItem('mockUser');
+      localStorage.removeItem('vendora_active_user');
+      // Only redirect if not already on the login page to avoid redirect loops
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
     const customMessage = error.response?.data?.message || error.message || 'An error occurred';
     return Promise.reject(new Error(customMessage));
   }

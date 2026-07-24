@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
+    public DbSet<Review> Reviews => Set<Review>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -78,6 +79,26 @@ public class AppDbContext : DbContext
             entity.HasOne(oi => oi.Product)
                   .WithMany(p => p.OrderItems)
                   .HasForeignKey(oi => oi.ProductId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Review Configuration ───────────────────────────────────────────────
+        modelBuilder.Entity<Review>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.Rating).IsRequired();
+            entity.Property(r => r.Comment).HasMaxLength(1000);
+
+            // Many reviews belong to one product; deleting product cascades to its reviews
+            entity.HasOne(r => r.Product)
+                  .WithMany(p => p.Reviews)
+                  .HasForeignKey(r => r.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Many reviews belong to one user; restrict user deletion if they have reviews
+            entity.HasOne(r => r.User)
+                  .WithMany(u => u.Reviews)
+                  .HasForeignKey(r => r.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
