@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Hosting;
 using TradeHub.API.DTOs.Products;
 using TradeHub.API.Models;
 using TradeHub.API.Repositories.Interfaces;
@@ -9,11 +10,16 @@ public class ProductService : IProductService
 {
     private readonly IProductRepository _productRepo;
     private readonly ICategoryRepository _categoryRepo;
+    private readonly IWebHostEnvironment _env;
 
-    public ProductService(IProductRepository productRepo, ICategoryRepository categoryRepo)
+    public ProductService(
+        IProductRepository productRepo,
+        ICategoryRepository categoryRepo,
+        IWebHostEnvironment env)
     {
         _productRepo = productRepo;
         _categoryRepo = categoryRepo;
+        _env = env;
     }
 
     public async Task<IEnumerable<ProductResponseDto>> GetAllAsync(
@@ -35,13 +41,47 @@ public class ProductService : IProductService
         var category = await _categoryRepo.GetByIdAsync(dto.CategoryId)
             ?? throw new KeyNotFoundException($"Category with ID {dto.CategoryId} does not exist.");
 
+        string imageUrl = "/uploads/products/placeholder.png";
+
+        if (dto.ImageFile != null && dto.ImageFile.Length > 0)
+        {
+            const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+            if (dto.ImageFile.Length > maxFileSize)
+            {
+                throw new ArgumentException("Image file size cannot exceed 5MB.");
+            }
+
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+            var extension = Path.GetExtension(dto.ImageFile.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension))
+            {
+                throw new ArgumentException("Invalid image file format. Allowed formats: .jpg, .jpeg, .png, .webp");
+            }
+
+            var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "products");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await dto.ImageFile.CopyToAsync(stream);
+            }
+
+            imageUrl = $"/uploads/products/{uniqueFileName}";
+        }
+
         var product = new Product
         {
             Name = dto.Name.Trim(),
-            Description = dto.Description.Trim(),
+            Description = dto.Description?.Trim() ?? string.Empty,
             Price = dto.Price,
             StockQuantity = dto.StockQuantity,
-            ImageUrl = dto.ImageUrl.Trim(),
+            ImageUrl = imageUrl,
             CategoryId = dto.CategoryId,
             IsActive = true,
             CreatedAt = DateTime.UtcNow

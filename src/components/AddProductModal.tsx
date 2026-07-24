@@ -10,6 +10,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Upload,
+  Trash2,
 } from 'lucide-react';
 import { createProduct, type CreateProductInput } from '../services/productService';
 import apiClient from '../services/apiClient';
@@ -36,8 +38,8 @@ const blankForm = (): CreateProductInput => ({
   description: '',
   price: 0,
   stockQuantity: 0,
-  imageUrl: '',
   categoryId: 0,
+  imageFile: null,
 });
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -48,11 +50,13 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   onSuccess,
 }) => {
   const [form, setForm] = useState<CreateProductInput>(blankForm());
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dragActive, setDragActive] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [imageError, setImageError] = useState(false);
 
   // Fetch categories from the live API; fall back to hardcoded list on failure
   useEffect(() => {
@@ -71,13 +75,27 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
       });
   }, [isOpen]);
 
+  // Clean up image preview URL on unmount or file change
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
       setForm(blankForm());
+      setSelectedFile(null);
+      setImagePreview(null);
       setError(null);
       setSaved(false);
-      setImageError(false);
+      setDragActive(false);
     }
   }, [isOpen]);
 
@@ -97,6 +115,54 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
   const set = <K extends keyof CreateProductInput>(key: K, value: CreateProductInput[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
+  // Process selected file
+  const handleFileSelect = (file: File) => {
+    const allowedExtensions = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxFileSize = 5 * 1024 * 1024; // 5 MB
+
+    if (!allowedExtensions.includes(file.type) && !/\.(jpg|jpeg|png|webp)$/i.test(file.name)) {
+      return setError('Invalid file format. Please select a JPG, PNG, or WEBP image.');
+    }
+
+    if (file.size > maxFileSize) {
+      return setError('File size exceeds the maximum limit of 5MB.');
+    }
+
+    setError(null);
+    setSelectedFile(file);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const removeFile = () => {
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+    }
+    setSelectedFile(null);
+    setImagePreview(null);
+  };
+
   // Submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,7 +172,6 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     if (form.categoryId < 1) return setError('Please select a category.');
     if (form.price <= 0) return setError('Price must be greater than zero.');
     if (form.stockQuantity < 0) return setError('Stock quantity cannot be negative.');
-    if (!form.imageUrl.trim()) return setError('Image URL is required.');
 
     setError(null);
     setLoading(true);
@@ -117,8 +182,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         description: form.description.trim(),
         price: Number(form.price),
         stockQuantity: Number(form.stockQuantity),
-        imageUrl: form.imageUrl.trim(),
         categoryId: Number(form.categoryId),
+        imageFile: selectedFile,
       });
 
       setSaved(true);
@@ -138,7 +203,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   // Shared input style
   const inputClass =
-    'w-full bg-[#0E1524] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-red-500/40 focus:border-red-500/60 hover:border-slate-700 transition-all font-medium';
+    'w-full bg-[#0E1524] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/60 hover:border-slate-700 transition-all font-medium';
 
   const labelClass = 'block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5';
 
@@ -162,8 +227,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-slate-800 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center">
-              <Package className="w-4.5 h-4.5 text-red-400" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+              <Package className="w-4.5 h-4.5 text-indigo-400" />
             </div>
             <div>
               <h2
@@ -217,34 +282,35 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             </div>
           </div>
 
-          {/* Category + Price */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-            <div>
-              <label htmlFor="ap-category" className={labelClass}>
-                Category <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
-                <select
-                  id="ap-category"
-                  required
-                  value={form.categoryId === 0 ? '' : form.categoryId}
-                  onChange={(e) => set('categoryId', Number(e.target.value))}
-                  className={`${inputClass} pl-9 appearance-none cursor-pointer`}
-                  disabled={loading}
-                >
-                  <option value="" disabled>
-                    Select a category…
+          {/* Category — full width */}
+          <div>
+            <label htmlFor="ap-category" className={labelClass}>
+              Category <span className="text-red-400">*</span>
+            </label>
+            <div className="relative">
+              <Layers className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+              <select
+                id="ap-category"
+                required
+                value={form.categoryId === 0 ? '' : form.categoryId}
+                onChange={(e) => set('categoryId', Number(e.target.value))}
+                className={`${inputClass} pl-9 appearance-none cursor-pointer`}
+                disabled={loading}
+              >
+                <option value="" disabled>
+                  Select a category…
+                </option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
                   </option>
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                ))}
+              </select>
             </div>
+          </div>
 
+          {/* Price + Stock — side by side, 50 / 50 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
               <label htmlFor="ap-price" className={labelClass}>
                 Price ($) <span className="text-red-400">*</span>
@@ -266,68 +332,86 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                 />
               </div>
             </div>
+
+            <div>
+              <label htmlFor="ap-stock" className={labelClass}>
+                Stock Quantity <span className="text-red-400">*</span>
+              </label>
+              <input
+                id="ap-stock"
+                type="number"
+                required
+                min="0"
+                value={form.stockQuantity === 0 ? '' : form.stockQuantity}
+                onChange={(e) => set('stockQuantity', parseInt(e.target.value, 10) || 0)}
+                placeholder="e.g. 50"
+                className={`${inputClass} font-mono`}
+                disabled={loading}
+              />
+            </div>
           </div>
 
-          {/* Stock Quantity */}
+          {/* Product Image Drag & Drop / File Picker */}
           <div>
-            <label htmlFor="ap-stock" className={labelClass}>
-              Stock Quantity <span className="text-red-400">*</span>
-            </label>
-            <input
-              id="ap-stock"
-              type="number"
-              required
-              min="0"
-              value={form.stockQuantity === 0 ? '' : form.stockQuantity}
-              onChange={(e) => set('stockQuantity', parseInt(e.target.value, 10) || 0)}
-              placeholder="e.g. 50"
-              className={`${inputClass} font-mono`}
-              disabled={loading}
-            />
-          </div>
-
-          {/* Image URL + live preview */}
-          <div>
-            <label htmlFor="ap-imageUrl" className={labelClass}>
-              Image URL <span className="text-red-400">*</span>
-            </label>
-            <div className="flex gap-3 items-start">
-              <div className="relative flex-1">
-                <ImageIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+            <label className={labelClass}>Product Image</label>
+            {imagePreview ? (
+              <div className="relative w-full h-44 rounded-xl border border-slate-800 bg-[#0E1524] overflow-hidden flex items-center justify-center group">
+                <img
+                  src={imagePreview}
+                  alt="Product Showcase Preview"
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-xs">
+                  <button
+                    type="button"
+                    onClick={removeFile}
+                    disabled={loading}
+                    className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-lg"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Remove Image</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                className={`w-full h-36 rounded-xl border-2 border-dashed flex flex-col items-center justify-center p-4 text-center cursor-pointer transition-colors ${
+                  dragActive
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : 'border-slate-800 hover:border-slate-700 bg-[#0E1524]'
+                }`}
+              >
                 <input
-                  id="ap-imageUrl"
-                  type="url"
-                  required
-                  value={form.imageUrl}
+                  type="file"
+                  id="ap-file-upload"
+                  accept="image/jpeg,image/png,image/webp"
                   onChange={(e) => {
-                    set('imageUrl', e.target.value);
-                    setImageError(false);
+                    if (e.target.files && e.target.files[0]) {
+                      handleFileSelect(e.target.files[0]);
+                    }
                   }}
-                  placeholder="https://images.unsplash.com/photo-…"
-                  className={`${inputClass} pl-9`}
+                  className="hidden"
                   disabled={loading}
                 />
+                <label
+                  htmlFor="ap-file-upload"
+                  className="w-full h-full flex flex-col items-center justify-center cursor-pointer select-none"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2">
+                    <Upload className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-bold text-slate-200">
+                    Click to upload or drag and drop
+                  </span>
+                  <span className="text-[10px] text-slate-500 mt-1">
+                    PNG, JPG, WEBP up to 5MB
+                  </span>
+                </label>
               </div>
-
-              {/* Live image preview thumbnail */}
-              <div className="w-12 h-12 flex-shrink-0 rounded-xl border border-slate-700 bg-slate-900 overflow-hidden flex items-center justify-center">
-                {form.imageUrl && !imageError ? (
-                  <img
-                    src={form.imageUrl}
-                    alt="Preview"
-                    className="w-full h-full object-cover"
-                    onError={() => setImageError(true)}
-                  />
-                ) : (
-                  <ImageIcon className="w-5 h-5 text-slate-600" />
-                )}
-              </div>
-            </div>
-            {imageError && form.imageUrl && (
-              <p className="text-[11px] text-amber-400 mt-1.5 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                Image failed to load — please check the URL.
-              </p>
             )}
           </div>
 
@@ -395,7 +479,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
               id="add-product-modal-submit"
               form="add-product-form"
               disabled={loading || saved}
-              className="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-red-800 disabled:opacity-70 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-600/20 transition-all flex items-center gap-2 cursor-pointer"
+              className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 disabled:opacity-70 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 cursor-pointer"
             >
               {loading ? (
                 <>
@@ -419,3 +503,4 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 };
 
 export default AddProductModal;
+

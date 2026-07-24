@@ -119,6 +119,9 @@ else
     app.UseHttpsRedirection();
 }
 
+// 3. Static Files — serves wwwroot/uploads/products as public URLs (no auth required)
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

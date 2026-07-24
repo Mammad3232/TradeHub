@@ -20,8 +20,9 @@ export interface CreateProductInput {
   description: string;
   price: number;
   stockQuantity: number;
-  imageUrl: string;
   categoryId: number;
+  imageUrl?: string;
+  imageFile?: File | null;
 }
 
 export interface ProductFilterParams {
@@ -40,7 +41,18 @@ export const getProductById = async (id: number): Promise<Product> => {
 };
 
 export const createProduct = async (data: CreateProductInput): Promise<Product> => {
-  return await apiClient.post<never, Product>('/products', data);
+  const formData = new FormData();
+  formData.append('name', data.name);
+  formData.append('description', data.description || '');
+  formData.append('price', data.price.toString());
+  formData.append('stockQuantity', data.stockQuantity.toString());
+  formData.append('categoryId', data.categoryId.toString());
+
+  if (data.imageFile) {
+    formData.append('imageFile', data.imageFile);
+  }
+
+  return await apiClient.post<never, Product>('/products', formData);
 };
 
 export const updateProduct = async (id: number, data: Partial<CreateProductInput>): Promise<Product> => {
@@ -49,4 +61,13 @@ export const updateProduct = async (id: number, data: Partial<CreateProductInput
 
 export const deleteProduct = async (id: number): Promise<void> => {
   return await apiClient.delete(`/products/${id}`);
+};
+
+/** Helper to prepend API base URL for uploaded static images (e.g. /uploads/products/xyz.jpg) */
+export const getImageUrl = (imagePath?: string): string => {
+  if (!imagePath) return '';
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('blob:')) {
+    return imagePath;
+  }
+  return `http://localhost:5229${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
 };

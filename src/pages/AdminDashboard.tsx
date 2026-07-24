@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
 import { AddProductModal } from '../components/AddProductModal';
-import { getProducts, type Product as ApiProduct } from '../services/productService';
+import { getProducts, getImageUrl, type Product as ApiProduct } from '../services/productService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminVendors } from '../components/AdminVendors';
 import {
@@ -106,6 +106,7 @@ interface Product {
   vendor: string;
   category: string;
   status: 'Active' | 'Out of Stock' | 'Draft';
+  image?: string;
 }
 
 interface PermissionRule {
@@ -283,6 +284,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
           stock: p.stockQuantity,
           vendor: 'TradeHub',
           category: p.category,
+          image: getImageUrl(p.image),
           status: p.isActive
             ? p.stockQuantity === 0
               ? 'Out of Stock'
@@ -776,8 +778,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                     <tr key={p.id} className="hover:bg-slate-950/20 transition-colors">
                       <td className={tdClass}>
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center flex-shrink-0">
-                            <Package className="w-4 h-4 text-slate-400" />
+                          <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0">
+                            {p.image ? (
+                              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <Package className="w-4 h-4 text-slate-400" />
+                            )}
                           </div>
                           <div>
                             <span className="font-bold text-white text-sm block">{p.name}</span>

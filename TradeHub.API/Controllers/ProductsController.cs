@@ -49,11 +49,12 @@ public class ProductsController : ControllerBase
     /// <summary>Create a new product. Admins and Vendors only.</summary>
     [HttpPost]
     [Authorize(Roles = "Admin,Vendor")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponseDto>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    public async Task<IActionResult> Create([FromBody] CreateProductDto dto)
+    public async Task<IActionResult> Create([FromForm] CreateProductDto dto)
     {
         if (!ModelState.IsValid)
         {
@@ -61,9 +62,16 @@ public class ProductsController : ControllerBase
             return BadRequest(ApiResponse.Fail("Validation failed.", errors));
         }
 
-        var created = await _productService.CreateAsync(dto);
-        return CreatedAtAction(nameof(GetById), new { id = created.Id },
-            ApiResponse<ProductResponseDto>.Ok(created, "Product created successfully."));
+        try
+        {
+            var created = await _productService.CreateAsync(dto);
+            return CreatedAtAction(nameof(GetById), new { id = created.Id },
+                ApiResponse<ProductResponseDto>.Ok(created, "Product created successfully."));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
     }
 
     /// <summary>Update a product. Admins and Vendors only.</summary>

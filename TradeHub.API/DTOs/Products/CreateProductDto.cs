@@ -19,11 +19,13 @@ public class CreateProductDto
     [Range(0, int.MaxValue, ErrorMessage = "Stock quantity cannot be negative.")]
     public int StockQuantity { get; set; }
 
-    [Required(ErrorMessage = "Image URL is required.")]
-    [Url(ErrorMessage = "Please provide a valid image URL.")]
-    public string ImageUrl { get; set; } = string.Empty;
-
     [Required]
     [Range(1, int.MaxValue, ErrorMessage = "A valid category must be selected.")]
     public int CategoryId { get; set; }
+
+    /// <summary>
+    /// The image file uploaded from the client (multipart/form-data).
+    /// Allowed types: .jpg, .jpeg, .png, .webp — max 5 MB.
+    /// </summary>
+    public IFormFile? ImageFile { get; set; }
 }
