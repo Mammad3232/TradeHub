@@ -97,6 +97,21 @@ const mockFeaturedProducts: MockProduct[] = [
   },
 ];
 
+// ── Image URL resolver (mirrors ProductCard logic) ───────────────────────────
+const BACKEND_ORIGIN = 'http://localhost:5229';
+const PLACEHOLDER = 'https://placehold.co/600x400/0f172a/1e293b?text=No+Image';
+
+const resolveImage = (raw?: string): string => {
+  if (!raw) return PLACEHOLDER;
+  if (
+    raw.startsWith('http://') ||
+    raw.startsWith('https://') ||
+    raw.startsWith('blob:') ||
+    raw.startsWith('data:')
+  ) return raw;
+  return `${BACKEND_ORIGIN}${raw.startsWith('/') ? '' : '/'}${raw}`;
+};
+
 export const ProductGrid: React.FC = () => {
   const { addToCart, toggleWishlist, isWishlisted, pushToast, setMiniCartOpen } = useShop();
 
@@ -115,7 +130,7 @@ export const ProductGrid: React.FC = () => {
             category: p.category,
             price: p.price,
             rating: p.rating || 4.5,
-            image: p.image,
+            image: resolveImage(p.image),
           }));
           setProducts(mapped);
         } else {
@@ -205,8 +220,9 @@ export const ProductGrid: React.FC = () => {
                   <img
                     src={product.image}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
+                    onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
                   />
 
                   {/* Faded overlay on card hover */}

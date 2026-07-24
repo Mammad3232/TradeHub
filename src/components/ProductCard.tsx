@@ -3,6 +3,27 @@ import { Link } from 'react-router-dom';
 import { Star, Store, ShoppingCart, Heart, Eye } from 'lucide-react';
 import type { Product } from '../services/api';
 
+// ── Image URL resolver ────────────────────────────────────────────────────────
+// If the backend returns a relative path (e.g. /uploads/products/xyz.jpg),
+// prepend the backend origin. Absolute URLs are passed through unchanged.
+const BACKEND_ORIGIN = 'http://localhost:5229';
+
+const PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E" +
+  "%3Crect width='400' height='300' fill='%230f172a'/%3E" +
+  "%3Crect x='160' y='100' width='80' height='60' rx='8' fill='%231e293b'/%3E" +
+  "%3Ccircle cx='185' cy='120' r='8' fill='%2334d399' opacity='.4'/%3E" +
+  "%3Cpolygon points='175,150 205,130 205,150' fill='%2334d399' opacity='.4'/%3E" +
+  "%3C/svg%3E";
+
+const resolveImage = (raw?: string): string => {
+  if (!raw) return PLACEHOLDER;
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('blob:') || raw.startsWith('data:')) {
+    return raw;
+  }
+  return `${BACKEND_ORIGIN}${raw.startsWith('/') ? '' : '/'}${raw}`;
+};
+
 interface ProductCardProps {
   product: Product;
 }
@@ -32,6 +53,7 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [wishlisted, setWishlisted] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [imgSrc, setImgSrc] = useState(() => resolveImage(product.image));
 
   const handleAddToCart = () => {
     setAddedToCart(true);
@@ -42,11 +64,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <article className="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-slate-700 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
 
       {/* ── Image Section ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-slate-950 h-48">
+      <div className="relative overflow-hidden bg-slate-950 h-56">
         <img
-          src={product.image}
+          src={imgSrc}
           alt={product.title}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          onError={() => setImgSrc(PLACEHOLDER)}
         />
 
         {/* Overlay actions (appear on hover) */}
