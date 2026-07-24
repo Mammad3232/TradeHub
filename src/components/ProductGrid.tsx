@@ -216,17 +216,17 @@ export const ProductGrid: React.FC = () => {
                 className="group relative bg-[#0B1120] border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300"
               >
                 {/* ── Product Image Box */}
-                <div className="relative h-56 w-full overflow-hidden bg-slate-950">
+                <div className="relative h-56 w-full overflow-hidden bg-slate-950 rounded-t-2xl">
                   <img
                     src={product.image}
                     alt={product.title}
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover object-center rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                     onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
                   />
 
                   {/* Faded overlay on card hover */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
                   {/* Badge */}
                   {product.badge && (

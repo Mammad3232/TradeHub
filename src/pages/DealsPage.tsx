@@ -161,11 +161,11 @@ export const DealsPage: React.FC = () => {
                 </div>
 
                 {/* Product Image */}
-                <div className="h-52 w-full overflow-hidden bg-slate-950 relative">
+                <div className="h-52 w-full overflow-hidden bg-slate-950 relative rounded-t-2xl">
                   <img
                     src={product.image}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute bottom-3 left-3 bg-slate-900/80 text-slate-300 border border-slate-800 text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">
                     {product.category}

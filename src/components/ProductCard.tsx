@@ -64,16 +64,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <article className="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-slate-700 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
 
       {/* ── Image Section ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-slate-950 h-56">
+      <div className="relative overflow-hidden bg-slate-950 h-56 w-full rounded-t-2xl">
         <img
           src={imgSrc}
           alt={product.title}
-          className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+          className="w-full h-full object-cover object-center rounded-t-2xl transition-transform duration-500 group-hover:scale-105"
           onError={() => setImgSrc(PLACEHOLDER)}
         />
 
         {/* Overlay actions (appear on hover) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
         {/* Quick-view button */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">

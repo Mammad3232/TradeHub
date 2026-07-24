@@ -166,11 +166,11 @@ export const NewArrivalsPage: React.FC = () => {
                 </div>
 
                 {/* Image */}
-                <div className="h-56 w-full overflow-hidden bg-slate-950">
+                <div className="relative h-56 w-full overflow-hidden bg-slate-950 rounded-t-2xl">
                   <img
                     src={product.image}
                     alt={product.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover rounded-t-2xl group-hover:scale-105 transition-transform duration-500"
                   />
                 </div>
 

@@ -191,11 +191,11 @@ export const WishlistPage: React.FC = () => {
                     className="group relative bg-[#0E1524] border border-slate-800 rounded-3xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl"
                   >
                     {/* Product Image Box */}
-                    <div className="relative h-60 w-full overflow-hidden bg-slate-950">
+                    <div className="relative h-60 w-full overflow-hidden bg-slate-950 rounded-t-3xl">
                       <img
                         src={product.image}
                         alt={product.title}
-                        className={`w-full h-full object-cover transition-transform duration-500 ${
+                        className={`w-full h-full object-cover rounded-t-3xl transition-transform duration-500 ${
                           isInStock ? 'group-hover:scale-105' : 'grayscale opacity-75'
                         }`}
                       />

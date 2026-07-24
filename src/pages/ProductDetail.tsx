@@ -194,11 +194,11 @@ export const ProductDetail: React.FC = () => {
           <div className="lg:col-span-6 space-y-6">
             
             {/* Primary Main Image Container */}
-            <div className="relative aspect-square w-full rounded-2xl border border-slate-800/60 bg-[#0E1524] overflow-hidden flex items-center justify-center group shadow-inner">
+            <div className="relative aspect-square w-full rounded-2xl border border-slate-800/60 bg-slate-950 overflow-hidden flex items-center justify-center group shadow-inner">
               <img
                 src={galleryImages[activeImageIndex]}
                 alt={product.title}
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover rounded-2xl transition-transform duration-500 group-hover:scale-105"
               />
               
               {/* Maximize Image overlay */}
@@ -224,7 +224,7 @@ export const ProductDetail: React.FC = () => {
                   key={index}
                   type="button"
                   onClick={() => setActiveImageIndex(index)}
-                  className={`aspect-square w-full rounded-xl overflow-hidden bg-[#0E1524] border-2 transition-all cursor-pointer flex items-center justify-center relative ${
+                  className={`aspect-square w-full rounded-xl overflow-hidden bg-slate-950 border-2 transition-all cursor-pointer flex items-center justify-center relative ${
                     activeImageIndex === index
                       ? 'border-purple-500 shadow-md shadow-purple-600/10'
                       : 'border-slate-800 hover:border-slate-700/80'
