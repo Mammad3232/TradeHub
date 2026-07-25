@@ -46,11 +46,22 @@ public class OrdersController : ControllerBase
             return BadRequest(ApiResponse.Fail("Validation failed.", errors));
         }
 
-        var userId = GetCurrentUserId();
-        var created = await _orderService.CreateAsync(dto, userId);
+        try
+        {
+            var userId = GetCurrentUserId();
+            var created = await _orderService.CreateAsync(dto, userId);
 
-        return CreatedAtAction(nameof(GetById), new { id = created.Id },
-            ApiResponse<OrderResponseDto>.Ok(created, "Order placed successfully."));
+            return CreatedAtAction(nameof(GetById), new { id = created.Id },
+                ApiResponse<OrderResponseDto>.Ok(created, "Order placed successfully."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
     }
 
     /// <summary>Get orders. Admin sees all, customer sees only their own.</summary>

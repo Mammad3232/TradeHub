@@ -101,7 +101,7 @@ export const WishlistPage: React.FC = () => {
                 className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-600/25 flex items-center gap-2 cursor-pointer"
               >
                 <ShoppingCart className="w-4 h-4" />
-                <span>Move All to Cart</span>
+                <span>Add All to Cart</span>
               </button>
 
               <button

@@ -15,15 +15,31 @@ public class ProductRepository : IProductRepository
     }
 
     public async Task<IEnumerable<Product>> GetAllAsync(
-        string? category, decimal? minPrice, decimal? maxPrice, string? search)
+        string? category,
+        decimal? minPrice,
+        decimal? maxPrice,
+        string? search,
+        int? subcategoryId = null,
+        string? subcategorySlug = null,
+        IEnumerable<int>? brandIds = null,
+        double? minRating = null)
     {
         var query = _db.Products
             .Include(p => p.Category)
+            .Include(p => p.Subcategory)
+            .Include(p => p.Brand)
+            .Include(p => p.Reviews)
             .Where(p => p.IsActive)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(category))
             query = query.Where(p => p.Category.Name.ToLower() == category.ToLower());
+
+        if (subcategoryId.HasValue)
+            query = query.Where(p => p.SubcategoryId == subcategoryId.Value);
+
+        if (!string.IsNullOrWhiteSpace(subcategorySlug))
+            query = query.Where(p => p.Subcategory != null && p.Subcategory.Slug.ToLower() == subcategorySlug.ToLower());
 
         if (minPrice.HasValue)
             query = query.Where(p => p.Price >= minPrice.Value);
@@ -36,12 +52,30 @@ public class ProductRepository : IProductRepository
                 p.Name.ToLower().Contains(search.ToLower()) ||
                 p.Description.ToLower().Contains(search.ToLower()));
 
+        // Filter by one or more Brand IDs (multi-select)
+        var brandIdList = brandIds?.ToList();
+        if (brandIdList is { Count: > 0 })
+            query = query.Where(p => p.BrandId.HasValue && brandIdList.Contains(p.BrandId.Value));
+
+        // Rating filter — based on average of product Reviews (if any),
+        // else fallback default rating of 4.5
+        if (minRating.HasValue)
+        {
+            var floor = minRating.Value;
+            query = query.Where(p =>
+                (!p.Reviews.Any() && 4.5 >= floor) ||
+                (p.Reviews.Any() && p.Reviews.Average(r => (double)r.Rating) >= floor));
+        }
+
         return await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
     }
+
 
     public async Task<Product?> GetByIdAsync(int id)
         => await _db.Products
             .Include(p => p.Category)
+            .Include(p => p.Subcategory)
+            .Include(p => p.Brand)
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
     public async Task<Product> CreateAsync(Product product)

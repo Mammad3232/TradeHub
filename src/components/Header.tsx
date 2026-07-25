@@ -28,6 +28,8 @@ export interface HeaderCurrentUser {
   role: string;
   name?: string;
   email?: string;
+  logoUrl?: string;
+  avatarUrl?: string;
 }
 
 interface HeaderProps {
@@ -391,38 +393,40 @@ export const Header: React.FC<HeaderProps> = ({
                     ) : (
                       <>
                         <div className="max-h-72 overflow-y-auto divide-y divide-slate-800/60 scrollbar-thin">
-                          {cartItems.map((item) => (
+                          {cartItems.filter(Boolean).map((item) => (
                             <div key={item.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800/30 transition-colors">
                               {/* Thumbnail */}
                               <div className="w-14 h-14 rounded-xl overflow-hidden bg-slate-900 flex-shrink-0">
                                 <img
-                                  src={item.image}
-                                  alt={item.title}
+                                  src={item?.image || ''}
+                                  alt={item?.title || 'Product'}
                                   className="w-full h-full object-cover"
                                 />
                               </div>
 
                               {/* Info */}
                               <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-white line-clamp-1">{item.title}</p>
-                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">{item.brand}</p>
-                                <p className="text-xs font-black text-purple-400 mt-1">${(item.price * item.quantity).toFixed(2)}</p>
+                                <p className="text-xs font-bold text-white line-clamp-1">{item?.title || 'Product'}</p>
+                                <p className="text-[10px] text-slate-500 uppercase tracking-wider mt-0.5">{item?.brand || 'Vendora'}</p>
+                                <p className="text-xs font-black text-purple-400 mt-1">${((item?.price ?? 0) * (item?.quantity ?? 1)).toFixed(2)}</p>
                               </div>
 
                               {/* Qty controls */}
                               <div className="flex items-center gap-1 flex-shrink-0">
                                 <button
                                   type="button"
-                                  onClick={() => updateQty(item.id, item.quantity - 1)}
-                                  className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+                                  onClick={() => updateQty(item.id, (item?.quantity ?? 1) - 1)}
+                                  disabled={(item?.quantity ?? 1) <= 1}
+                                  className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
                                 >
                                   <Minus className="w-3 h-3" />
                                 </button>
-                                <span className="text-xs font-bold text-white w-5 text-center">{item.quantity}</span>
+                                <span className="text-xs font-bold text-white w-5 text-center">{item?.quantity ?? 1}</span>
                                 <button
                                   type="button"
-                                  onClick={() => updateQty(item.id, item.quantity + 1)}
-                                  className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
+                                  onClick={() => updateQty(item.id, (item?.quantity ?? 1) + 1)}
+                                  disabled={item?.stock !== undefined && item?.stock !== null && (item?.quantity ?? 1) >= item.stock}
+                                  className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
                                 >
                                   <Plus className="w-3 h-3" />
                                 </button>
@@ -511,8 +515,12 @@ export const Header: React.FC<HeaderProps> = ({
                       className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-800/60 transition-all cursor-pointer group"
                       aria-label="Open user menu"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-[11px] font-black shadow-md ring-2 ring-purple-500/20 group-hover:ring-purple-500/40 transition-all flex-shrink-0">
-                        {initials}
+                      <div className="w-8 h-8 rounded-full overflow-hidden shadow-md ring-2 ring-purple-500/20 group-hover:ring-purple-500/40 transition-all flex-shrink-0 flex items-center justify-center bg-slate-800">
+                        {currentUser?.logoUrl || currentUser?.avatarUrl ? (
+                          <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                        ) : (
+                          <span className="text-[11px] font-black text-white">{initials}</span>
+                        )}
                       </div>
                       <div className="hidden md:flex items-center gap-1">
                         <span className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors">
@@ -525,8 +533,12 @@ export const Header: React.FC<HeaderProps> = ({
                     {profileOpen && (
                       <div className="absolute right-0 top-12 w-56 bg-[#0E1524] border border-slate-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                         <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-                            {initials}
+                          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-slate-800 flex-shrink-0">
+                            {currentUser?.logoUrl || currentUser?.avatarUrl ? (
+                              <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                            ) : (
+                              <span className="text-xs font-black text-white">{initials}</span>
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-white truncate">{currentUser.name ?? 'User'}</p>
@@ -616,8 +628,12 @@ export const Header: React.FC<HeaderProps> = ({
                     {isLoggedIn ? (
                       <>
                         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 mb-2">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
-                            {initials}
+                          <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-slate-800 flex-shrink-0">
+                            {currentUser?.logoUrl || currentUser?.avatarUrl ? (
+                              <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                            ) : (
+                              <span className="text-xs font-black text-white">{initials}</span>
+                            )}
                           </div>
                           <div className="min-w-0">
                             <p className="text-sm font-bold text-white truncate">{currentUser.name ?? 'User'}</p>
@@ -657,14 +673,18 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className="space-y-2">
                   <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest px-2">Merchants</h4>
                   <div className="space-y-0.5">
+                    {/* Become a Vendor CTA — always visible */}
                     <Link to="/vendor-register" onClick={() => setMobileMenuOpen(false)}
                       className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-amber-400 hover:text-amber-300 hover:bg-amber-500/5 transition-colors">
                       Become a Vendor
                     </Link>
-                    <Link to="/vendor/dashboard" onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2.5 rounded-lg text-sm text-slate-350 hover:text-white hover:bg-slate-850 transition-colors">
-                      Vendor Dashboard
-                    </Link>
+                    {/* Vendor Dashboard — only for Vendors and Admins */}
+                    {(isVendor || isAdmin) && (
+                      <Link to="/vendor/dashboard" onClick={() => setMobileMenuOpen(false)}
+                        className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/8 transition-colors">
+                        Vendor Dashboard
+                      </Link>
+                    )}
                   </div>
                 </div>
 

@@ -7,6 +7,7 @@ public class CategoryResponseDto
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public int ProductCount { get; set; }
+    public List<SubcategoryResponseDto> Subcategories { get; set; } = new();
 }
 
 public class CreateCategoryDto

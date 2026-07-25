@@ -8,7 +8,9 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
     public DbSet<User> Users => Set<User>();
+    public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Subcategory> Subcategories => Set<Subcategory>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
@@ -18,7 +20,7 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // ── User Configuration ─────────────────────────────────────────────
+        // User Configuration
         modelBuilder.Entity<User>(entity =>
         {
             entity.HasKey(u => u.Id);
@@ -29,14 +31,37 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Role).HasConversion<string>();
         });
 
-        // ── Category Configuration ─────────────────────────────────────────
+        // Brand Configuration
+        modelBuilder.Entity<Brand>(entity =>
+        {
+            entity.HasKey(b => b.Id);
+            entity.Property(b => b.Name).IsRequired().HasMaxLength(150);
+            entity.Property(b => b.LogoUrl).HasMaxLength(500);
+            entity.HasIndex(b => b.Name).IsUnique();
+        });
+
+        // Category Configuration
         modelBuilder.Entity<Category>(entity =>
         {
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Name).IsRequired().HasMaxLength(100);
         });
 
-        // ── Product Configuration ──────────────────────────────────────────
+        // Subcategory Configuration
+        modelBuilder.Entity<Subcategory>(entity =>
+        {
+            entity.HasKey(s => s.Id);
+            entity.Property(s => s.Name).IsRequired().HasMaxLength(100);
+            entity.Property(s => s.Slug).IsRequired().HasMaxLength(100);
+
+            // Many subcategories belong to one category
+            entity.HasOne(s => s.Category)
+                  .WithMany(c => c.Subcategories)
+                  .HasForeignKey(s => s.CategoryId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Product Configuration
         modelBuilder.Entity<Product>(entity =>
         {
             entity.HasKey(p => p.Id);
@@ -50,9 +75,23 @@ public class AppDbContext : DbContext
                   .WithMany(c => c.Products)
                   .HasForeignKey(p => p.CategoryId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            // Many products optionally belong to one subcategory
+            entity.HasOne(p => p.Subcategory)
+                  .WithMany(s => s.Products)
+                  .HasForeignKey(p => p.SubcategoryId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            // Many products optionally belong to one brand
+            entity.HasOne(p => p.Brand)
+                  .WithMany(b => b.Products)
+                  .HasForeignKey(p => p.BrandId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // ── Order Configuration ────────────────────────────────────────────
+        // Order Configuration
         modelBuilder.Entity<Order>(entity =>
         {
             entity.HasKey(o => o.Id);
@@ -65,7 +104,7 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── OrderItem Configuration ────────────────────────────────────────
+        // OrderItem Configuration
         modelBuilder.Entity<OrderItem>(entity =>
         {
             entity.HasKey(oi => oi.Id);
@@ -82,27 +121,25 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Review Configuration ───────────────────────────────────────────────
+        // Review Configuration
         modelBuilder.Entity<Review>(entity =>
         {
             entity.HasKey(r => r.Id);
             entity.Property(r => r.Rating).IsRequired();
             entity.Property(r => r.Comment).HasMaxLength(1000);
 
-            // Many reviews belong to one product; deleting product cascades to its reviews
             entity.HasOne(r => r.Product)
                   .WithMany(p => p.Reviews)
                   .HasForeignKey(r => r.ProductId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Many reviews belong to one user; restrict user deletion if they have reviews
             entity.HasOne(r => r.User)
                   .WithMany(u => u.Reviews)
                   .HasForeignKey(r => r.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // ── Seed Data ──────────────────────────────────────────────────────
+        // Seed Data
         SeedData.Seed(modelBuilder);
     }
 }

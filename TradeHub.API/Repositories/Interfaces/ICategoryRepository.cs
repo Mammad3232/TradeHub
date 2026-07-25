@@ -8,4 +8,5 @@ public interface ICategoryRepository
     Task<Category?> GetByIdAsync(int id);
     Task<Category> CreateAsync(Category category);
     Task<bool> NameExistsAsync(string name);
+    Task<IEnumerable<Subcategory>> GetSubcategoriesByCategoryIdAsync(int categoryId);
 }

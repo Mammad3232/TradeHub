@@ -176,7 +176,7 @@ export const Cart: React.FC = () => {
 
               {/* Items Card List */}
               <div className="space-y-3">
-                {cartItems.map((item) => (
+                {cartItems.filter(Boolean).map((item) => (
                   <div
                     key={item.id}
                     className="bg-[#0E1524] border border-slate-800 hover:border-slate-700 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-lg group"
@@ -185,20 +185,20 @@ export const Cart: React.FC = () => {
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-950 border border-slate-800 flex-shrink-0">
                         <img
-                          src={item.image}
-                          alt={item.title}
+                          src={item?.image || ''}
+                          alt={item?.title || 'Product'}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                       </div>
                       <div className="min-w-0">
                         <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500">
-                          {item.brand}
+                          {item?.brand || 'Vendora'}
                         </p>
                         <h3 className="text-sm font-bold text-white truncate group-hover:text-purple-300 transition-colors">
-                          {item.title}
+                          {item?.title || 'Product'}
                         </h3>
                         <p className="text-sm font-black text-purple-400 mt-1">
-                          ${item.price.toFixed(2)}
+                          ${(item?.price ?? 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -206,22 +206,42 @@ export const Cart: React.FC = () => {
                     {/* Qty Controls + Subtotal + Remove */}
                     <div className="flex items-center justify-between sm:justify-end gap-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
                       {/* Qty Selector */}
-                      <div className="flex items-center gap-2 bg-[#060913] border border-slate-800 rounded-xl p-1">
+                      <div className="flex items-center gap-1 bg-[#060913] border border-slate-800 rounded-xl p-1">
                         <button
                           type="button"
-                          onClick={() => updateQty(item.id, item.quantity - 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                          onClick={() => updateQty(item.id, (item?.quantity ?? 1) - 1)}
+                          disabled={(item?.quantity ?? 1) <= 1}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
                           aria-label="Decrease quantity"
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="w-8 text-center text-sm font-bold text-white">
-                          {item.quantity}
-                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          max={item?.stock}
+                          value={item?.quantity ?? 1}
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value, 10);
+                            if (!isNaN(val)) {
+                              updateQty(item.id, val);
+                            }
+                          }}
+                          onBlur={(e) => {
+                            let val = parseInt(e.target.value, 10);
+                            if (isNaN(val) || val < 1) val = 1;
+                            if (item?.stock !== undefined && item?.stock !== null && val > item.stock) {
+                              val = item.stock;
+                            }
+                            updateQty(item.id, val);
+                          }}
+                          className="w-10 text-center text-sm font-bold text-white bg-transparent focus:outline-none focus:ring-1 focus:ring-purple-500 rounded border border-slate-800/80 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
                         <button
                           type="button"
-                          onClick={() => updateQty(item.id, item.quantity + 1)}
-                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                          onClick={() => updateQty(item.id, (item?.quantity ?? 1) + 1)}
+                          disabled={item?.stock !== undefined && item?.stock !== null && (item?.quantity ?? 1) >= item.stock}
+                          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
                           aria-label="Increase quantity"
                         >
                           <Plus className="w-3.5 h-3.5" />
@@ -231,7 +251,7 @@ export const Cart: React.FC = () => {
                       {/* Item Total */}
                       <div className="text-right min-w-[70px]">
                         <span className="text-sm font-black text-white">
-                          ${(item.price * item.quantity).toFixed(2)}
+                          ${((item?.price ?? 0) * (item?.quantity ?? 1)).toFixed(2)}
                         </span>
                       </div>
 

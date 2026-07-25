@@ -1,13 +1,15 @@
-import { getProducts as fetchProductsApi, type Product } from './productService';
+import { getProducts as fetchProductsApi, type Product, type ProductFilterParams } from './productService';
 
-export type { Product };
+export type { Product, ProductFilterParams };
 
 /**
- * Legacy compatibility wrapper for getProducts()
+ * Compatibility wrapper for getProducts(category?: string | ProductFilterParams)
  */
-export const getProducts = async (): Promise<Product[]> => {
+export const getProducts = async (category?: string | ProductFilterParams): Promise<Product[]> => {
   try {
-    return await fetchProductsApi();
+    const params: ProductFilterParams | undefined =
+      typeof category === 'string' ? { category } : category;
+    return await fetchProductsApi(params);
   } catch (err) {
     console.error("Failed to fetch products from backend:", err);
     return [];

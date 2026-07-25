@@ -22,6 +22,138 @@ namespace TradeHub.API.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("TradeHub.API.Models.Brand", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("LogoUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Brands");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            LogoUrl = "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+                            Name = "Apple"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            LogoUrl = "https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg",
+                            Name = "Samsung"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            LogoUrl = "https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg",
+                            Name = "Sony"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Bose"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Dyson"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Logitech"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "LG"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            LogoUrl = "https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg",
+                            Name = "Nike"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            LogoUrl = "https://upload.wikimedia.org/wikipedia/commons/2/20/Adidas_Logo.svg",
+                            Name = "Adidas"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "Zara"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Name = "H&M"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Name = "Casio"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Name = "IKEA"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Name = "Philips"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Name = "Penguin Books"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Name = "O'Reilly Media"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Name = "Gymshark"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Name = "Garmin"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Name = "Decathlon"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Name = "Starbucks"
+                        });
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Category", b =>
                 {
                     b.Property<int>("Id")
@@ -357,6 +489,9 @@ namespace TradeHub.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("BrandId")
+                        .HasColumnType("int");
+
                     b.Property<int>("CategoryId")
                         .HasColumnType("int");
 
@@ -387,9 +522,16 @@ namespace TradeHub.API.Migrations
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SubcategoryId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("BrandId");
+
                     b.HasIndex("CategoryId");
+
+                    b.HasIndex("SubcategoryId");
 
                     b.ToTable("Products");
 
@@ -397,6 +539,7 @@ namespace TradeHub.API.Migrations
                         new
                         {
                             Id = 1,
+                            BrandId = 4,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 1, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Premium over-ear wireless headphones with 40-hour battery life and active noise cancellation.",
@@ -404,11 +547,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Aether Sound Wave Wireless Headphones",
                             Price = 299.99m,
-                            StockQuantity = 45
+                            StockQuantity = 45,
+                            SubcategoryId = 4
                         },
                         new
                         {
                             Id = 2,
+                            BrandId = 6,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 1, 16, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Compact TKL mechanical keyboard with per-key RGB lighting and PBT keycaps.",
@@ -416,11 +561,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Vanguard Ergonomic Mechanical Keyboard",
                             Price = 149.00m,
-                            StockQuantity = 80
+                            StockQuantity = 80,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 3,
+                            BrandId = 2,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 1, 17, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "IPS panel monitor with 144Hz refresh rate, 1ms response time, and USB-C PD 65W charging.",
@@ -428,11 +575,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "ProView 4K Ultra HD Monitor 27\"",
                             Price = 549.00m,
-                            StockQuantity = 22
+                            StockQuantity = 22,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 4,
+                            BrandId = 18,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Advanced biometric ring tracking heart rate, sleep stages, SpO2, and recovery scores.",
@@ -440,11 +589,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Pulse Pro Smart Fitness Tracking Ring",
                             Price = 159.00m,
-                            StockQuantity = 60
+                            StockQuantity = 60,
+                            SubcategoryId = 4
                         },
                         new
                         {
                             Id = 21,
+                            BrandId = 1,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 2, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "True wireless earbuds with spatial audio, IPX7 water resistance, and wireless charging case.",
@@ -452,11 +603,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Orion Pro ANC Earbuds",
                             Price = 189.99m,
-                            StockQuantity = 110
+                            StockQuantity = 110,
+                            SubcategoryId = 4
                         },
                         new
                         {
                             Id = 22,
+                            BrandId = 6,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 3, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Ultra-lightweight gaming mouse with 26K DPI optical sensor and PTFE feet.",
@@ -464,11 +617,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Apex Precision Wireless Mouse",
                             Price = 79.99m,
-                            StockQuantity = 140
+                            StockQuantity = 140,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 23,
+                            BrandId = 3,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 4, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "360-degree immersive sound with deep bass, 24-hour playtime, and IP67 dust/water rating.",
@@ -476,11 +631,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "CinemaSound Portable Bluetooth Speaker",
                             Price = 119.00m,
-                            StockQuantity = 95
+                            StockQuantity = 95,
+                            SubcategoryId = 4
                         },
                         new
                         {
                             Id = 24,
+                            BrandId = 1,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Ultra-compact fast charger for laptops, tablets, and phones simultaneously.",
@@ -488,11 +645,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Nexus 100W Multi-Port USB-C GaN Charger",
                             Price = 69.50m,
-                            StockQuantity = 180
+                            StockQuantity = 180,
+                            SubcategoryId = 4
                         },
                         new
                         {
                             Id = 25,
+                            BrandId = 14,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Screen-bar monitor light with dual ambient backlighting and smart auto-dimming sensor.",
@@ -500,11 +659,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Aura Desk RGB Smart Ambient Lightbar",
                             Price = 89.99m,
-                            StockQuantity = 70
+                            StockQuantity = 70,
+                            SubcategoryId = 3
                         },
                         new
                         {
                             Id = 26,
+                            BrandId = 6,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "1080p 60fps streaming webcam with autofocus, dual noise-canceling mics, and privacy shutter.",
@@ -512,11 +673,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "StreamCraft HD Pro Web Camera 1080p",
                             Price = 99.00m,
-                            StockQuantity = 65
+                            StockQuantity = 65,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 27,
+                            BrandId = 2,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 8, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Rugged aluminum external SSD with read speeds up to 2000MB/s and drop protection.",
@@ -524,11 +687,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "TitanShield 2TB NVMe Portable SSD",
                             Price = 179.99m,
-                            StockQuantity = 85
+                            StockQuantity = 85,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 28,
+                            BrandId = 6,
                             CategoryId = 1,
                             CreatedAt = new DateTime(2026, 2, 9, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Adjustable aluminum laptop riser with built-in quiet dual cooling fans.",
@@ -536,11 +701,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "VaporCool Ergonomic Laptop Stand",
                             Price = 49.99m,
-                            StockQuantity = 130
+                            StockQuantity = 130,
+                            SubcategoryId = 2
                         },
                         new
                         {
                             Id = 5,
+                            BrandId = 10,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Premium full-grain leather bomber jacket with quilted lining and custom YKK zippers.",
@@ -548,11 +715,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Apex Leather Bomber Jacket",
                             Price = 249.50m,
-                            StockQuantity = 35
+                            StockQuantity = 35,
+                            SubcategoryId = 5
                         },
                         new
                         {
                             Id = 6,
+                            BrandId = 8,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Lightweight runners with responsive foam sole and breathable engineered mesh upper.",
@@ -560,11 +729,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Urban Streetwear Performance Sneakers",
                             Price = 129.99m,
-                            StockQuantity = 120
+                            StockQuantity = 120,
+                            SubcategoryId = 7
                         },
                         new
                         {
                             Id = 7,
+                            BrandId = 11,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "100% premium Oxford cotton shirt with a tailored slim fit, perfect for business casual.",
@@ -572,11 +743,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Classic Oxford Button-Down Shirt",
                             Price = 79.00m,
-                            StockQuantity = 200
+                            StockQuantity = 200,
+                            SubcategoryId = 5
                         },
                         new
                         {
                             Id = 29,
+                            BrandId = 10,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 11, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Elegant mid-length wool trench coat with double-breasted button closure.",
@@ -584,11 +757,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Nordic Minimalist Wool Blend Coat",
                             Price = 219.00m,
-                            StockQuantity = 40
+                            StockQuantity = 40,
+                            SubcategoryId = 6
                         },
                         new
                         {
                             Id = 30,
+                            BrandId = 11,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Handmade 100% Mulberry silk tie set with matching pocket square and cuff links.",
@@ -596,11 +771,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Heritage Italian Silk Necktie Set",
                             Price = 59.99m,
-                            StockQuantity = 90
+                            StockQuantity = 90,
+                            SubcategoryId = 8
                         },
                         new
                         {
                             Id = 31,
+                            BrandId = 10,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 13, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Titanium frame sunglasses with TAC 100% UV400 anti-glare polarized lenses.",
@@ -608,11 +785,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Vanguard Aviator Polarized Sunglasses",
                             Price = 139.00m,
-                            StockQuantity = 75
+                            StockQuantity = 75,
+                            SubcategoryId = 8
                         },
                         new
                         {
                             Id = 32,
+                            BrandId = 8,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 14, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Water-resistant heavy canvas weekender travel bag with genuine leather trim.",
@@ -620,11 +799,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Urban Commuter Canvas Duffle Bag",
                             Price = 109.50m,
-                            StockQuantity = 60
+                            StockQuantity = 60,
+                            SubcategoryId = 8
                         },
                         new
                         {
                             Id = 33,
+                            BrandId = 11,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Ultra-soft 100% Mongolian cashmere crewneck sweater for cold weather warmth.",
@@ -632,11 +813,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "AeroSoft Cashmere Knit Sweater",
                             Price = 169.00m,
-                            StockQuantity = 50
+                            StockQuantity = 50,
+                            SubcategoryId = 5
                         },
                         new
                         {
                             Id = 34,
+                            BrandId = 12,
                             CategoryId = 2,
                             CreatedAt = new DateTime(2026, 2, 16, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Sapphire crystal glass timepiece with 21-jewel Japanese automatic movement.",
@@ -644,11 +827,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Chronos Automatic Minimalist Wristwatch",
                             Price = 289.00m,
-                            StockQuantity = 30
+                            StockQuantity = 30,
+                            SubcategoryId = 8
                         },
                         new
                         {
                             Id = 8,
+                            BrandId = 14,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Tunable white and color smart lamp with app control, voice assistant support, and 16M color options.",
@@ -656,11 +841,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Iris Smart Ambient Light & Lamp",
                             Price = 59.99m,
-                            StockQuantity = 90
+                            StockQuantity = 90,
+                            SubcategoryId = 10
                         },
                         new
                         {
                             Id = 9,
+                            BrandId = 14,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Ultrasonic aromatherapy diffuser with 7 ambient LED colors and auto shut-off.",
@@ -668,11 +855,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Lumina Ceramic Essential Oil Diffuser",
                             Price = 45.00m,
-                            StockQuantity = 75
+                            StockQuantity = 75,
+                            SubcategoryId = 10
                         },
                         new
                         {
                             Id = 10,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Handcrafted organizer set combining Italian marble and solid walnut for a premium workspace.",
@@ -680,11 +869,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Marble & Walnut Desk Organizer Set",
                             Price = 89.00m,
-                            StockQuantity = 40
+                            StockQuantity = 40,
+                            SubcategoryId = 9
                         },
                         new
                         {
                             Id = 35,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 11, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Soft cotton woven throw blanket with fringe detail, perfect for sofa styling.",
@@ -692,11 +883,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Zenith Hand-Woven Boho Throw Blanket",
                             Price = 49.99m,
-                            StockQuantity = 110
+                            StockQuantity = 110,
+                            SubcategoryId = 12
                         },
                         new
                         {
                             Id = 36,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Set of 3 matte textured stoneware vases designed for pampas grass and dried blooms.",
@@ -704,11 +897,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Artisan Ceramic Flower Vase Trio",
                             Price = 64.00m,
-                            StockQuantity = 85
+                            StockQuantity = 85,
+                            SubcategoryId = 11
                         },
                         new
                         {
                             Id = 37,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 13, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Silent non-ticking sweep movement clock crafted from natural solid teak wood.",
@@ -716,11 +911,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Mid-Century Wooden Wall Clock 12\"",
                             Price = 55.00m,
-                            StockQuantity = 95
+                            StockQuantity = 95,
+                            SubcategoryId = 10
                         },
                         new
                         {
                             Id = 38,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 14, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Hand-poured soy candle with notes of cedarwood, amber, and wild lavender in a glass jar.",
@@ -728,11 +925,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Botanical Soy Wax Scented Candle",
                             Price = 28.50m,
-                            StockQuantity = 200
+                            StockQuantity = 200,
+                            SubcategoryId = 12
                         },
                         new
                         {
                             Id = 39,
+                            BrandId = 13,
                             CategoryId = 3,
                             CreatedAt = new DateTime(2026, 3, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Set of 2 heavy-duty oak floating shelves with hidden mounting brackets.",
@@ -740,11 +939,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Minimalist Floating Wooden Wall Shelves",
                             Price = 74.99m,
-                            StockQuantity = 65
+                            StockQuantity = 65,
+                            SubcategoryId = 9
                         },
                         new
                         {
                             Id = 11,
+                            BrandId = 16,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 3, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "In-depth guide covering distributed systems, microservices, event-driven architecture, and cloud-native patterns.",
@@ -752,11 +953,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Modern Web Architecture & Systems",
                             Price = 39.99m,
-                            StockQuantity = 150
+                            StockQuantity = 150,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 12,
+                            BrandId = 16,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Essential reading on UX principles, cognitive affordances, and designing intuitive product experiences.",
@@ -764,11 +967,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "The Design of Everyday Systems & Interfaces",
                             Price = 49.00m,
-                            StockQuantity = 100
+                            StockQuantity = 100,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 13,
+                            BrandId = 16,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Robert C. Martin's classic guide to writing readable, maintainable, and testable code.",
@@ -776,11 +981,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Clean Code: A Handbook of Agile Craftsmanship",
                             Price = 44.99m,
-                            StockQuantity = 85
+                            StockQuantity = 85,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 40,
+                            BrandId = 16,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Comprehensive technical reference on advanced C# language features, async programming, and memory tuning.",
@@ -788,11 +995,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Mastering C# 12 & .NET 9 High Performance",
                             Price = 59.99m,
-                            StockQuantity = 120
+                            StockQuantity = 120,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 41,
+                            BrandId = 15,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Peter Thiel's groundbreaking book on how to build companies that create new things.",
@@ -800,11 +1009,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Zero to One: Notes on Startups and Future",
                             Price = 27.00m,
-                            StockQuantity = 175
+                            StockQuantity = 175,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 42,
+                            BrandId = 15,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 8, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "James Clear's framework for improving every day through tiny changes and system building.",
@@ -812,11 +1023,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Atomic Habits: An Easy & Proven Way",
                             Price = 24.99m,
-                            StockQuantity = 220
+                            StockQuantity = 220,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 43,
+                            BrandId = 16,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 9, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Martin Kleppmann's authoritative guide to data systems architecture, scalability, and fault tolerance.",
@@ -824,11 +1037,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Designing Data-Intensive Applications",
                             Price = 54.50m,
-                            StockQuantity = 90
+                            StockQuantity = 90,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 44,
+                            BrandId = 15,
                             CategoryId = 4,
                             CreatedAt = new DateTime(2026, 4, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Timeless lessons on wealth, greed, and happiness by Morgan Housel.",
@@ -836,11 +1051,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "The Psychology of Money",
                             Price = 22.00m,
-                            StockQuantity = 140
+                            StockQuantity = 140,
+                            SubcategoryId = 15
                         },
                         new
                         {
                             Id = 14,
+                            BrandId = 19,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 4, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Commercial-grade hex dumbbells with non-slip rubber coating and ergonomic contoured handles.",
@@ -848,11 +1065,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Titan Rubber Hex Dumbbell Set (2x 15kg)",
                             Price = 89.99m,
-                            StockQuantity = 55
+                            StockQuantity = 55,
+                            SubcategoryId = 17
                         },
                         new
                         {
                             Id = 15,
+                            BrandId = 19,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 4, 12, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Latex resistance bands in 5 progressive tension levels for home workout, rehab, and mobility training.",
@@ -860,11 +1079,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "AeroGrip Resistance Band Set (5 Levels)",
                             Price = 34.99m,
-                            StockQuantity = 200
+                            StockQuantity = 200,
+                            SubcategoryId = 17
                         },
                         new
                         {
                             Id = 16,
+                            BrandId = 8,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Carbon fiber plate running shoes with ZoomX foam for elite race-day performance.",
@@ -872,11 +1093,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "VitalStride Pro Running Shoes",
                             Price = 219.00m,
-                            StockQuantity = 65
+                            StockQuantity = 65,
+                            SubcategoryId = 18
                         },
                         new
                         {
                             Id = 17,
+                            BrandId = 18,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 5, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Wi-Fi connected smart scale measuring 17 body metrics including muscle mass, visceral fat, and bone density.",
@@ -884,11 +1107,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "SmartScale Pro Body Composition Analyzer",
                             Price = 79.99m,
-                            StockQuantity = 48
+                            StockQuantity = 48,
+                            SubcategoryId = 20
                         },
                         new
                         {
                             Id = 45,
+                            BrandId = 19,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 6, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Extra thick non-slip alignment yoga mat with carrying strap.",
@@ -896,11 +1121,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "FlexCore Eco-Friendly TPE Yoga Mat 6mm",
                             Price = 42.50m,
-                            StockQuantity = 130
+                            StockQuantity = 130,
+                            SubcategoryId = 17
                         },
                         new
                         {
                             Id = 46,
+                            BrandId = 19,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 7, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Tangle-free steel cable speed jump rope with aluminum anti-slip handles.",
@@ -908,11 +1135,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Pulse Speed Bearing Skipping Jump Rope",
                             Price = 19.99m,
-                            StockQuantity = 190
+                            StockQuantity = 190,
+                            SubcategoryId = 17
                         },
                         new
                         {
                             Id = 47,
+                            BrandId = 18,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 8, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Powerful brushless motor muscle recovery massage gun with 6 interchangeable heads.",
@@ -920,11 +1149,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "TheraGun Deep Tissue Percussion Massager",
                             Price = 149.00m,
-                            StockQuantity = 70
+                            StockQuantity = 70,
+                            SubcategoryId = 17
                         },
                         new
                         {
                             Id = 48,
+                            BrandId = 8,
                             CategoryId = 5,
                             CreatedAt = new DateTime(2026, 5, 9, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Double-wall vacuum insulated water bottle keeping drinks cold for 24 hours.",
@@ -932,11 +1163,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "HydroMax 1.5L Insulated Stainless Steel Bottle",
                             Price = 38.00m,
-                            StockQuantity = 160
+                            StockQuantity = 160,
+                            SubcategoryId = 18
                         },
                         new
                         {
                             Id = 18,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 10, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Single-origin Ethiopian Yirgacheffe beans, dark roast, with tasting notes of dark chocolate and blackberry.",
@@ -944,11 +1177,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Terra Espresso Roast Artisan Coffee Beans (1kg)",
                             Price = 32.50m,
-                            StockQuantity = 300
+                            StockQuantity = 300,
+                            SubcategoryId = 21
                         },
                         new
                         {
                             Id = 19,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 15, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Premium blended herbal teas sourced from Swiss Alpine meadows — 60 enveloped sachets.",
@@ -956,11 +1191,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Organic Alpine Herbal Tea Reserve Selection",
                             Price = 24.00m,
-                            StockQuantity = 250
+                            StockQuantity = 250,
+                            SubcategoryId = 21
                         },
                         new
                         {
                             Id = 20,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 20, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Stone-ground first-harvest Japanese ceremonial matcha with vibrant green color and umami sweetness.",
@@ -968,11 +1205,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Matcha Ceremonial Grade (100g Tin)",
                             Price = 42.00m,
-                            StockQuantity = 180
+                            StockQuantity = 180,
+                            SubcategoryId = 21
                         },
                         new
                         {
                             Id = 49,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 21, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Steeped for 24 hours from organic specialty Arabica beans. Bold, smooth, and low acidity.",
@@ -980,11 +1219,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Artisan Cold Brew Coffee Concentrate (1L)",
                             Price = 18.99m,
-                            StockQuantity = 140
+                            StockQuantity = 140,
+                            SubcategoryId = 22
                         },
                         new
                         {
                             Id = 50,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 22, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Refreshing sparkling tonic infused with ashwagandha, elderberry, and hibiscus.",
@@ -992,11 +1233,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Sparkling Botanical Adaptogen Tonic 12-Pack",
                             Price = 36.00m,
-                            StockQuantity = 110
+                            StockQuantity = 110,
+                            SubcategoryId = 22
                         },
                         new
                         {
                             Id = 51,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 23, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Warming blend of organic turmeric, ginger, cinnamon, and black pepper for golden milk.",
@@ -1004,11 +1247,13 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Golden Milk Turmeric Latte Blend (250g)",
                             Price = 22.50m,
-                            StockQuantity = 150
+                            StockQuantity = 150,
+                            SubcategoryId = 21
                         },
                         new
                         {
                             Id = 52,
+                            BrandId = 20,
                             CategoryId = 6,
                             CreatedAt = new DateTime(2026, 5, 24, 0, 0, 0, 0, DateTimeKind.Utc),
                             Description = "Upcycled dried coffee cherries delivering a sweet, fruity tea rich in antioxidants.",
@@ -1016,7 +1261,8 @@ namespace TradeHub.API.Migrations
                             IsActive = true,
                             Name = "Pure Cascara Coffee Cherry Tea (200g)",
                             Price = 19.50m,
-                            StockQuantity = 120
+                            StockQuantity = 120,
+                            SubcategoryId = 21
                         });
                 });
 
@@ -1280,6 +1526,204 @@ namespace TradeHub.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.Subcategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("Subcategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CategoryId = 1,
+                            Name = "Phones & Tablets",
+                            Slug = "phones"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            CategoryId = 1,
+                            Name = "Computers & Laptops",
+                            Slug = "laptops"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            CategoryId = 1,
+                            Name = "Home Appliances",
+                            Slug = "appliances"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            CategoryId = 1,
+                            Name = "Audio & Gadgets",
+                            Slug = "audio"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            CategoryId = 2,
+                            Name = "Men's Clothing",
+                            Slug = "men"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            CategoryId = 2,
+                            Name = "Women's Clothing",
+                            Slug = "women"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            CategoryId = 2,
+                            Name = "Shoes & Sneakers",
+                            Slug = "shoes"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            CategoryId = 2,
+                            Name = "Accessories",
+                            Slug = "accessories"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            CategoryId = 3,
+                            Name = "Furniture",
+                            Slug = "furniture"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            CategoryId = 3,
+                            Name = "Lighting",
+                            Slug = "lighting"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            CategoryId = 3,
+                            Name = "Kitchenware",
+                            Slug = "kitchen"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            CategoryId = 3,
+                            Name = "Textiles & Bedding",
+                            Slug = "textiles"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            CategoryId = 4,
+                            Name = "Fiction & Novels",
+                            Slug = "fiction"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            CategoryId = 4,
+                            Name = "Sci-Fi & Fantasy",
+                            Slug = "scifi"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            CategoryId = 4,
+                            Name = "Personal Dev.",
+                            Slug = "personal"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            CategoryId = 4,
+                            Name = "Kids Books",
+                            Slug = "kids"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            CategoryId = 5,
+                            Name = "Gym Equipment",
+                            Slug = "gym"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            CategoryId = 5,
+                            Name = "Sportswear",
+                            Slug = "sportswear"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            CategoryId = 5,
+                            Name = "Supplements",
+                            Slug = "supplements"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            CategoryId = 5,
+                            Name = "Smart Wearables",
+                            Slug = "wearables"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            CategoryId = 6,
+                            Name = "Hot Drinks",
+                            Slug = "hot"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            CategoryId = 6,
+                            Name = "Cold Drinks",
+                            Slug = "cold"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            CategoryId = 6,
+                            Name = "Energy Drinks",
+                            Slug = "energy"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            CategoryId = 6,
+                            Name = "Organic Juices",
+                            Slug = "organic"
+                        });
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -1504,13 +1948,27 @@ namespace TradeHub.API.Migrations
 
             modelBuilder.Entity("TradeHub.API.Models.Product", b =>
                 {
+                    b.HasOne("TradeHub.API.Models.Brand", "Brand")
+                        .WithMany("Products")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("TradeHub.API.Models.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("TradeHub.API.Models.Subcategory", "Subcategory")
+                        .WithMany("Products")
+                        .HasForeignKey("SubcategoryId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Brand");
+
                     b.Navigation("Category");
+
+                    b.Navigation("Subcategory");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Review", b =>
@@ -1532,9 +1990,27 @@ namespace TradeHub.API.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.Subcategory", b =>
+                {
+                    b.HasOne("TradeHub.API.Models.Category", "Category")
+                        .WithMany("Subcategories")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.Brand", b =>
+                {
+                    b.Navigation("Products");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Category", b =>
                 {
                     b.Navigation("Products");
+
+                    b.Navigation("Subcategories");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Order", b =>
@@ -1547,6 +2023,11 @@ namespace TradeHub.API.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.Subcategory", b =>
+                {
+                    b.Navigation("Products");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.User", b =>

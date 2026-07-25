@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
 import { AddProductModal } from '../components/AddProductModal';
 import { getProducts, getImageUrl, type Product as ApiProduct } from '../services/productService';
@@ -323,6 +323,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [showToast, setShowToast] = useState(false);
 
+  // ── Site Identity — Logo & Favicon Upload State ───────────────────────────
+  const [logoFile, setLogoFile]     = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile]   = useState<File | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [logoDragging, setLogoDragging]     = useState(false);
+  const [faviconDragging, setFaviconDragging] = useState(false);
+
+  const logoInputRef    = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoSelect = (file: File | null) => {
+    if (!file) return;
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  };
+
+  const handleFaviconSelect = (file: File | null) => {
+    if (!file) return;
+    if (faviconPreview) URL.revokeObjectURL(faviconPreview);
+    setFaviconFile(file);
+    setFaviconPreview(URL.createObjectURL(file));
+  };
+
+  const clearLogo = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
+  const clearFavicon = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (faviconPreview) URL.revokeObjectURL(faviconPreview);
+    setFaviconFile(null);
+    setFaviconPreview(null);
+    if (faviconInputRef.current) faviconInputRef.current.value = '';
+  };
+
   useEffect(() => {
     if (siteSettings?.siteName) {
       setSettings((prev) => ({
@@ -409,8 +450,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveStatus('saving');
-    // Simulate async API save
+
+    // ── Build FormData for backend (logo + favicon + text settings) ──────────
+    // When a real /api/admin/settings endpoint exists, post `formData` directly.
+    const formData = new FormData();
+    formData.append('siteName',        settings.siteName);
+    formData.append('supportEmail',    settings.supportEmail);
+    formData.append('commissionRate',  String(settings.commissionRate));
+    formData.append('maintenanceMode', String(settings.maintenanceMode));
+    formData.append('requireTwoFactor',String(settings.requireTwoFactor));
+    if (logoFile)    formData.append('logo',    logoFile,    logoFile.name);
+    if (faviconFile) formData.append('favicon', faviconFile, faviconFile.name);
+
+    // TODO: Replace the mock delay below with a real API call, e.g.:
+    // await fetch('/api/admin/settings', { method: 'POST', body: formData });
     await new Promise((r) => setTimeout(r, 1000));
+
     if (updateSiteSettings) {
       updateSiteSettings({
         siteName: settings.siteName,
@@ -1097,44 +1152,161 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {/* Platform Logo Upload Zone */}
+
+              {/* ── Platform Logo Upload Zone ── */}
               <div
-                className="group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600 transition-all cursor-pointer"
-                onClick={() => alert('Logo upload would open file picker here.')}
+                className={`group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+                  logoDragging
+                    ? 'border-indigo-500 bg-indigo-500/10'
+                    : logoPreview
+                    ? 'border-indigo-500/40 bg-[#0E1524]'
+                    : 'border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600'
+                }`}
+                onClick={() => !logoPreview && logoInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
+                onDragLeave={() => setLogoDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setLogoDragging(false);
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith('image/')) handleLogoSelect(file);
+                }}
                 role="button"
                 tabIndex={0}
+                aria-label="Upload platform logo"
               >
-                <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group-hover:bg-indigo-500/15 transition-colors">
-                  <UploadCloud className="w-7 h-7 text-indigo-400" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-white">Platform Logo</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">PNG, SVG or WebP · Max 2MB</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Recommended: 240×60 px</p>
-                </div>
-                <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
-                  Click to Upload
-                </span>
+                {/* Hidden file input */}
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/png,image/svg+xml,image/webp,image/jpeg"
+                  className="hidden"
+                  onChange={(e) => handleLogoSelect(e.target.files?.[0] ?? null)}
+                />
+
+                {logoPreview ? (
+                  /* ── Preview State ── */
+                  <>
+                    <div className="relative w-full flex items-center justify-center">
+                      <img
+                        src={logoPreview}
+                        alt="Logo preview"
+                        className="max-h-20 max-w-full object-contain rounded-lg"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); logoInputRef.current?.click(); }}
+                        className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full transition-colors"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearLogo}
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors"
+                      >
+                        <X className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                        Remove
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{logoFile?.name}</p>
+                  </>
+                ) : (
+                  /* ── Default Upload State ── */
+                  <>
+                    <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 group-hover:bg-indigo-500/15 transition-colors">
+                      <UploadCloud className="w-7 h-7 text-indigo-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">Platform Logo</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">PNG, SVG or WebP · Max 2MB</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Recommended: 240×60 px</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full">
+                      {logoDragging ? 'Drop to Upload' : 'Click or Drag to Upload'}
+                    </span>
+                  </>
+                )}
               </div>
 
-              {/* Favicon Upload Zone */}
+              {/* ── Browser Favicon Upload Zone ── */}
               <div
-                className="group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600 transition-all cursor-pointer"
-                onClick={() => alert('Favicon upload would open file picker here.')}
+                className={`group relative flex flex-col items-center justify-center gap-3 p-8 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${
+                  faviconDragging
+                    ? 'border-purple-500 bg-purple-500/10'
+                    : faviconPreview
+                    ? 'border-purple-500/40 bg-[#0E1524]'
+                    : 'border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600'
+                }`}
+                onClick={() => !faviconPreview && faviconInputRef.current?.click()}
+                onDragOver={(e) => { e.preventDefault(); setFaviconDragging(true); }}
+                onDragLeave={() => setFaviconDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setFaviconDragging(false);
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith('image/')) handleFaviconSelect(file);
+                }}
                 role="button"
                 tabIndex={0}
+                aria-label="Upload browser favicon"
               >
-                <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 group-hover:bg-purple-500/15 transition-colors">
-                  <UploadCloud className="w-7 h-7 text-purple-400" />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-bold text-white">Browser Favicon</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">ICO, PNG or SVG · Max 512KB</p>
-                  <p className="text-[11px] text-slate-500 mt-1">Recommended: 32×32 px</p>
-                </div>
-                <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full">
-                  Click to Upload
-                </span>
+                {/* Hidden file input */}
+                <input
+                  ref={faviconInputRef}
+                  type="file"
+                  accept="image/x-icon,image/png,image/svg+xml,image/vnd.microsoft.icon"
+                  className="hidden"
+                  onChange={(e) => handleFaviconSelect(e.target.files?.[0] ?? null)}
+                />
+
+                {faviconPreview ? (
+                  /* ── Preview State ── */
+                  <>
+                    <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden">
+                      <img
+                        src={faviconPreview}
+                        alt="Favicon preview"
+                        className="w-12 h-12 object-contain"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); faviconInputRef.current?.click(); }}
+                        className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full transition-colors"
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={clearFavicon}
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors"
+                      >
+                        <X className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                        Remove
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{faviconFile?.name}</p>
+                  </>
+                ) : (
+                  /* ── Default Upload State ── */
+                  <>
+                    <div className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 group-hover:bg-purple-500/15 transition-colors">
+                      <UploadCloud className="w-7 h-7 text-purple-400" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-bold text-white">Browser Favicon</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">ICO, PNG or SVG · Max 512KB</p>
+                      <p className="text-[11px] text-slate-500 mt-1">Recommended: 32×32 px</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-purple-400 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full">
+                      {faviconDragging ? 'Drop to Upload' : 'Click or Drag to Upload'}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

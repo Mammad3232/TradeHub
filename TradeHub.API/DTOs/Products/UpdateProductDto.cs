@@ -21,5 +21,9 @@ public class UpdateProductDto
 
     public int? CategoryId { get; set; }
 
+    public int? SubcategoryId { get; set; }
+
+    public int? BrandId { get; set; }
+
     public bool? IsActive { get; set; }
 }

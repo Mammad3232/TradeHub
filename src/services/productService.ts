@@ -1,4 +1,10 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
+
+export interface Brand {
+  id: number;
+  name: string;
+  logoUrl?: string | null;
+}
 
 export interface Product {
   id: number;
@@ -9,6 +15,11 @@ export interface Product {
   image: string;
   categoryId: number;
   category: string;
+  subcategoryId?: number | null;
+  subcategory?: string | null;
+  subcategorySlug?: string | null;
+  brandId?: number | null;
+  brand?: string | null;
   rating: number;
   isActive: boolean;
   createdAt: string;
@@ -21,38 +32,74 @@ export interface CreateProductInput {
   price: number;
   stockQuantity: number;
   categoryId: number;
+  subcategoryId?: number | null;
+  brandId?: number | null;
   imageUrl?: string;
   imageFile?: File | null;
 }
 
 export interface ProductFilterParams {
   category?: string;
+  subcategoryId?: number;
+  subcategorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
+  /** Multi-select brand IDs sent as repeated query params: ?brandIds=1&brandIds=2 */
+  brandIds?: number[];
+  /** Minimum average rating floor (e.g. 4 = "4 stars & up") */
+  minRating?: number;
 }
 
 export const getProducts = async (params?: ProductFilterParams): Promise<Product[]> => {
-  return await apiClient.get<never, Product[]>('/products', { params });
+  if (!params || Object.keys(params).length === 0) {
+    return await apiClient.get<never, Product[]>('/products');
+  }
+
+  // Build URLSearchParams manually to support repeated keys for brandIds array
+  const qs = new URLSearchParams();
+  if (params.category)       qs.set('category', params.category);
+  if (params.subcategoryId)  qs.set('subcategoryId', String(params.subcategoryId));
+  if (params.subcategorySlug) qs.set('subcategorySlug', params.subcategorySlug);
+  if (params.minPrice != null) qs.set('minPrice', String(params.minPrice));
+  if (params.maxPrice != null) qs.set('maxPrice', String(params.maxPrice));
+  if (params.search)         qs.set('search', params.search);
+  if (params.minRating != null) qs.set('minRating', String(params.minRating));
+  // Repeat brandIds as separate keys so ASP.NET Core binds them as List<int>
+  if (params.brandIds?.length) {
+    params.brandIds.forEach((id) => qs.append('brandIds', String(id)));
+  }
+
+  return await apiClient.get<never, Product[]>(`/products?${qs.toString()}`);
 };
 
 export const getProductById = async (id: number): Promise<Product> => {
   return await apiClient.get<never, Product>(`/products/${id}`);
 };
 
+export const getBrands = async (): Promise<Brand[]> => {
+  return await apiClient.get<never, Brand[]>("/brands");
+};
+
 export const createProduct = async (data: CreateProductInput): Promise<Product> => {
   const formData = new FormData();
-  formData.append('name', data.name);
-  formData.append('description', data.description || '');
-  formData.append('price', data.price.toString());
-  formData.append('stockQuantity', data.stockQuantity.toString());
-  formData.append('categoryId', data.categoryId.toString());
-
-  if (data.imageFile) {
-    formData.append('imageFile', data.imageFile);
+  formData.append("name", data.name);
+  formData.append("description", data.description || "");
+  formData.append("price", data.price.toString());
+  formData.append("stockQuantity", data.stockQuantity.toString());
+  formData.append("categoryId", data.categoryId.toString());
+  if (data.subcategoryId) {
+    formData.append("subcategoryId", data.subcategoryId.toString());
+  }
+  if (data.brandId) {
+    formData.append("brandId", data.brandId.toString());
   }
 
-  return await apiClient.post<never, Product>('/products', formData);
+  if (data.imageFile) {
+    formData.append("imageFile", data.imageFile);
+  }
+
+  return await apiClient.post<never, Product>("/products", formData);
 };
 
 export const updateProduct = async (id: number, data: Partial<CreateProductInput>): Promise<Product> => {
@@ -63,11 +110,10 @@ export const deleteProduct = async (id: number): Promise<void> => {
   return await apiClient.delete(`/products/${id}`);
 };
 
-/** Helper to prepend API base URL for uploaded static images (e.g. /uploads/products/xyz.jpg) */
 export const getImageUrl = (imagePath?: string): string => {
-  if (!imagePath) return '';
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://') || imagePath.startsWith('blob:')) {
+  if (!imagePath) return "";
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://") || imagePath.startsWith("blob:")) {
     return imagePath;
   }
-  return `http://localhost:5229${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+  return `http://localhost:5229${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
 };

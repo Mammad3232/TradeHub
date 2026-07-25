@@ -18,13 +18,22 @@ public class CategoriesController : ControllerBase
         _categoryService = categoryService;
     }
 
-    /// <summary>Get all categories with product counts.</summary>
+    /// <summary>Get all categories with subcategories and product counts.</summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<CategoryResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll()
     {
         var categories = await _categoryService.GetAllAsync();
         return Ok(ApiResponse<IEnumerable<CategoryResponseDto>>.Ok(categories));
+    }
+
+    /// <summary>Get all subcategories (departments) for a given category ID.</summary>
+    [HttpGet("{id:int}/subcategories")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<SubcategoryResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSubcategories(int id)
+    {
+        var subcategories = await _categoryService.GetSubcategoriesByCategoryIdAsync(id);
+        return Ok(ApiResponse<IEnumerable<SubcategoryResponseDto>>.Ok(subcategories));
     }
 
     /// <summary>Create a new category. Admin only.</summary>

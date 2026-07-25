@@ -1,10 +1,10 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   LayoutDashboard, Package, ShoppingCart, TrendingUp, Settings, LogOut,
   DollarSign, Users, ArrowUpRight, ArrowDownRight, Pencil, Trash2, Plus,
   X, Check, CreditCard, Building2, Mail, Store, Eye, AlertCircle,
   CheckCircle2, Activity, Percent, Save, UploadCloud, AtSign, Share2,
-  Globe, Loader2, Calendar, MapPin, Clock, ChevronRight, Truck,
+  Globe, Loader2, Calendar, MapPin, Clock, ChevronRight, Truck, Image as ImageIcon,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RecentOrdersTable } from '../components/RecentOrdersTable';
@@ -97,8 +97,9 @@ const inputCls = 'w-full bg-[#0B1120] border border-slate-700 rounded-xl px-4 py
 
 export const VendorDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef   = useRef<HTMLInputElement>(null);
+  const logoInputRef   = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // ── Navigation
   const [activeTab, setActiveTab] = useState('Dashboard');
@@ -121,21 +122,89 @@ export const VendorDashboard: React.FC = () => {
   // ── Analytics
   const [dateRange, setDateRange] = useState('This Year');
 
-  // ── Settings
-  const [settings, setSettings] = useState({
-    storeName: 'TechStore Co.',
-    description: 'Premium electronics and lifestyle products for the modern buyer.',
-    email: 'support@techstore.com',
-    phoneCode: '+1',
-    phoneNumber: '(555) 204-9900',
-    payoutMethod: 'Bank Transfer',
-    iban: 'DE89 3704 0044 0532 0130 00',
-    instagram: 'techstore.co',
-    facebook: 'TechStoreCo',
-    website: 'https://techstore.co',
-    logoUrl: '',
+  // ── Settings (initialized from persistent storage or active session)
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('vendora_vendor_settings');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            storeName:      parsed.storeName ?? 'TechStore Co.',
+            description:    parsed.description ?? 'Premium electronics and lifestyle products for the modern buyer.',
+            email:          parsed.email ?? 'support@techstore.com',
+            phoneCode:      parsed.phoneCode ?? '+1',
+            phoneNumber:    parsed.phoneNumber ?? '(555) 204-9900',
+            payoutMethod:   parsed.payoutMethod ?? 'Bank Transfer',
+            iban:           parsed.iban ?? 'DE89 3704 0044 0532 0130 00',
+            bankName:       parsed.bankName ?? 'Deutsche Bank',
+            accountHolder:  parsed.accountHolder ?? 'TechStore Co. LLC',
+            payoutSchedule: parsed.payoutSchedule ?? 'Monthly',
+            instagram:      parsed.instagram ?? 'techstore.co',
+            facebook:       parsed.facebook ?? 'TechStoreCo',
+            website:        parsed.website ?? 'https://techstore.co',
+            logoUrl:        parsed.logoUrl ?? '',
+            bannerUrl:      parsed.bannerUrl ?? '',
+            vacationMode:   parsed.vacationMode ?? false,
+          };
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+    // Fallback to active session logo if present
+    const rawUser = localStorage.getItem('vendora_user') || localStorage.getItem('mockUser') || localStorage.getItem('vendora_active_user');
+    let userLogo = '';
+    let userName = 'TechStore Co.';
+    let userEmail = 'support@techstore.com';
+    if (rawUser) {
+      try {
+        const u = JSON.parse(rawUser);
+        if (u.logoUrl) userLogo = u.logoUrl;
+        if (u.name) userName = u.name;
+        if (u.email) userEmail = u.email;
+      } catch {}
+    }
+    return {
+      storeName:      userName,
+      description:    'Premium electronics and lifestyle products for the modern buyer.',
+      email:          userEmail,
+      phoneCode:      '+1',
+      phoneNumber:    '(555) 204-9900',
+      payoutMethod:   'Bank Transfer',
+      iban:           'DE89 3704 0044 0532 0130 00',
+      bankName:       'Deutsche Bank',
+      accountHolder:  userName + ' LLC',
+      payoutSchedule: 'Monthly',
+      instagram:      'techstore.co',
+      facebook:       'TechStoreCo',
+      website:        'https://techstore.co',
+      logoUrl:        userLogo,
+      bannerUrl:      '',
+      vacationMode:   false,
+    };
   });
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [logoFile,   setLogoFile]   = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [saveState,  setSaveState]  = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  // Simulated API fetch of vendor settings on component mount
+  useEffect(() => {
+    const fetchVendorSettings = async () => {
+      // Simulate 150ms network round-trip latency
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      const saved = localStorage.getItem('vendora_vendor_settings');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setSettings((prev) => ({ ...prev, ...parsed }));
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    fetchVendorSettings();
+  }, []);
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
@@ -173,18 +242,107 @@ export const VendorDashboard: React.FC = () => {
 
   const handleSettingsSave = () => {
     setSaveState('saving');
+
+    const formData = new FormData();
+    formData.append('storeName',      settings.storeName);
+    formData.append('description',    settings.description);
+    formData.append('email',          settings.email);
+    formData.append('phoneCode',      settings.phoneCode);
+    formData.append('phoneNumber',    settings.phoneNumber);
+    formData.append('payoutMethod',   settings.payoutMethod);
+    formData.append('iban',           settings.iban);
+    formData.append('bankName',       settings.bankName);
+    formData.append('accountHolder',  settings.accountHolder);
+    formData.append('payoutSchedule', settings.payoutSchedule);
+    formData.append('instagram',      settings.instagram);
+    formData.append('facebook',       settings.facebook);
+    formData.append('website',        settings.website);
+    formData.append('vacationMode',   String(settings.vacationMode));
+
+    if (logoFile) {
+      formData.append('logoFile', logoFile, logoFile.name);
+    } else if (!settings.logoUrl) {
+      formData.append('logoUrl', '');
+    }
+
+    if (bannerFile) {
+      formData.append('bannerFile', bannerFile, bannerFile.name);
+    } else if (!settings.bannerUrl) {
+      formData.append('bannerUrl', '');
+    }
+
+    // TODO: await apiClient.put('/api/vendor/settings', formData);
     setTimeout(() => {
+      // 1. Persist settings to local storage so they survive F5 refresh
+      localStorage.setItem('vendora_vendor_settings', JSON.stringify(settings));
+
+      // 2. Instantly update active session user logoUrl and store/display name
+      const userKeys = ['vendora_user', 'mockUser', 'vendora_active_user'];
+      userKeys.forEach(key => {
+        const rawUser = localStorage.getItem(key);
+        if (rawUser) {
+          try {
+            const user = JSON.parse(rawUser);
+            user.logoUrl = settings.logoUrl;
+            user.avatarUrl = settings.logoUrl; // supporting both keys just in case
+            if (settings.storeName) {
+              user.name = settings.storeName;
+            }
+            localStorage.setItem(key, JSON.stringify(user));
+          } catch {}
+        }
+      });
+
+      // 3. Dispatch custom event so App.tsx instantly syncs global state (Header avatar)
+      window.dispatchEvent(new Event('vendora_user_update'));
+
       setSaveState('saved');
+      setLogoFile(null);
+      setBannerFile(null);
       setTimeout(() => setSaveState('idle'), 2000);
     }, 1000);
   };
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setSettings(s => ({ ...s, logoUrl: url }));
-    }
+    if (!file) return;
+    setLogoFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setSettings((s) => ({ ...s, logoUrl: dataUrl }));
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveLogo = () => {
+    setLogoFile(null);
+    setSettings((s) => ({ ...s, logoUrl: '' }));
+  };
+
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBannerFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setSettings((s) => ({ ...s, bannerUrl: dataUrl }));
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveBanner = () => {
+    setBannerFile(null);
+    setSettings((s) => ({ ...s, bannerUrl: '' }));
   };
 
   const viewOrder = orders.find(o => o.id === viewOrderId) ?? null;
@@ -258,7 +416,22 @@ export const VendorDashboard: React.FC = () => {
                 <Plus className="w-4 h-4" /> Add Product
               </button>
             )}
-            <div className="w-9 h-9 rounded-full bg-purple-600/15 text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold text-xs select-none">TS</div>
+            {settings.logoUrl ? (
+              <img
+                src={settings.logoUrl}
+                alt="Store Avatar"
+                className="w-9 h-9 rounded-full object-cover border border-purple-500/30 shadow-md flex-shrink-0"
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-purple-600/15 text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold text-xs select-none flex-shrink-0">
+                {settings.storeName
+                  .split(' ')
+                  .map((s) => s[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2) || 'TS'}
+              </div>
+            )}
           </div>
         </header>
 
@@ -560,21 +733,69 @@ export const VendorDashboard: React.FC = () => {
 
                 {/* Logo Upload */}
                 <div className="flex items-center gap-5">
-                  <div className="w-20 h-20 rounded-2xl bg-[#0B1120] border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 group hover:border-purple-500/50 transition-colors cursor-pointer"
-                    onClick={() => logoInputRef.current?.click()}>
-                    {settings.logoUrl
-                      ? <img src={settings.logoUrl} alt="logo" className="w-full h-full object-cover" />
-                      : <span className="text-3xl">{settings.storeName[0]}</span>}
+                  {/* ── Preview container: strict 80×80 square, never stretches ── */}
+                  <div
+                    className="w-20 h-20 rounded-xl bg-[#0B1120] border-2 border-dashed border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0 group hover:border-purple-500/50 transition-colors cursor-pointer"
+                    onClick={() => logoInputRef.current?.click()}
+                    title="Click to upload a new logo"
+                  >
+                    {settings.logoUrl ? (
+                      <img
+                        src={settings.logoUrl}
+                        alt="Store logo preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-3xl select-none" aria-hidden>
+                        {settings.storeName[0]?.toUpperCase()}
+                      </span>
+                    )}
                   </div>
+
                   <div>
-                    <p className="text-sm font-semibold text-white mb-1">Store Logo</p>
-                    <p className="text-xs text-slate-500 mb-2">PNG, JPG or WEBP. Recommended 256×256px.</p>
-                    <button type="button" onClick={() => logoInputRef.current?.click()}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer">
-                      <UploadCloud className="w-3.5 h-3.5" /> Upload Image
-                    </button>
-                    <input ref={logoInputRef} type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                    <p className="text-sm font-semibold text-white mb-0.5">Store Logo</p>
+                    <p className="text-xs text-slate-500 mb-2.5">PNG, JPG or WEBP. Recommended 256×256px.</p>
+                    <div className="flex items-center gap-2">
+                      {/* Upload button */}
+                      <button
+                        type="button"
+                        onClick={() => logoInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+                      >
+                        <UploadCloud className="w-3.5 h-3.5" />
+                        {settings.logoUrl ? 'Change' : 'Upload Image'}
+                      </button>
+
+                      {/* Remove button — only visible when a logo exists */}
+                      {settings.logoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveLogo}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 transition-all cursor-pointer"
+                          title="Remove logo"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Pending file indicator */}
+                    {logoFile && (
+                      <p className="text-[10px] text-purple-400 font-medium mt-1.5 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+                        {logoFile.name} — pending save
+                      </p>
+                    )}
                   </div>
+
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleLogoChange}
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -633,37 +854,208 @@ export const VendorDashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* ── Store Banner ── */}
+                <div className="pt-4 border-t border-slate-800/60">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Store Banner</p>
+                  {/* 3:1 aspect-ratio preview */}
+                  <div className="relative w-full h-32 rounded-xl overflow-hidden bg-[#0B1120] border border-dashed border-slate-700 mb-3 group">
+                    {settings.bannerUrl ? (
+                      <img
+                        src={settings.bannerUrl}
+                        alt="Store banner preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-1.5 text-slate-600">
+                        <ImageIcon className="w-6 h-6" />
+                        <span className="text-xs font-medium">No banner uploaded</span>
+                      </div>
+                    )}
+                    {/* Hover overlay */}
+                    <div
+                      onClick={() => bannerInputRef.current?.click()}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer"
+                    >
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <UploadCloud className="w-4 h-4" /> Click to change banner
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => bannerInputRef.current?.click()}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5" />
+                      {settings.bannerUrl ? 'Change Banner' : 'Upload Banner'}
+                    </button>
+                    {settings.bannerUrl && (
+                      <button
+                        type="button"
+                        onClick={handleRemoveBanner}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 rounded-lg text-xs font-semibold text-rose-400 hover:text-rose-300 transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Remove Banner
+                      </button>
+                    )}
+                    {bannerFile && (
+                      <p className="text-[10px] text-purple-400 font-medium flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse inline-block" />
+                        {bannerFile.name} — pending save
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    ref={bannerInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    onChange={handleBannerChange}
+                  />
+                  <p className="text-[10px] text-slate-600 mt-2">Recommended size: 1200×400px (3:1). PNG, JPG or WEBP.</p>
+                </div>
               </div>
 
-              {/* ── Payout Methods ── */}
+              {/* ── Payout & Financial Information ── */}
               <div className="bg-[#111827] rounded-2xl border border-slate-800/80 p-6 space-y-5">
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-8 h-8 rounded-lg bg-emerald-600/15 text-emerald-400 flex items-center justify-center"><CreditCard className="w-4 h-4" /></div>
-                  <h3 className="text-base font-bold text-white">Payout Methods</h3>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Payout &amp; Financial Information</h3>
+                    <p className="text-[11px] text-slate-500">Manage how and when you receive your earnings</p>
+                  </div>
                 </div>
+
                 <div className="flex items-start gap-3 bg-amber-500/5 border border-amber-500/15 rounded-xl p-3">
                   <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                   <p className="text-xs text-amber-300/80">Payout details are encrypted and stored securely. Changes take 1–2 business days to reflect.</p>
                 </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Payout Method */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payout Method</label>
                     <div className="relative">
                       <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
-                      <select value={settings.payoutMethod} onChange={e => setSettings(s => ({ ...s, payoutMethod: e.target.value }))}
-                        className={`${inputCls} pl-9 appearance-none cursor-pointer`}>
+                      <select
+                        value={settings.payoutMethod}
+                        onChange={e => setSettings(s => ({ ...s, payoutMethod: e.target.value }))}
+                        className={`${inputCls} pl-9 appearance-none cursor-pointer`}
+                      >
                         {['Bank Transfer', 'Debit Card', 'PayPal', 'Stripe'].map(m => <option key={m}>{m}</option>)}
                       </select>
                     </div>
                   </div>
+
+                  {/* Payout Schedule */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
-                      {settings.payoutMethod === 'Bank Transfer' ? 'IBAN' : 'Account / Email'}
-                    </label>
-                    <input type="text" value={settings.iban} onChange={e => setSettings(s => ({ ...s, iban: e.target.value }))}
-                      className={inputCls}
-                      placeholder={settings.payoutMethod === 'Bank Transfer' ? 'DE89 3704 0044 ...' : 'account@email.com'} />
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Payout Schedule</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                      <select
+                        value={settings.payoutSchedule}
+                        onChange={e => setSettings(s => ({ ...s, payoutSchedule: e.target.value }))}
+                        className={`${inputCls} pl-9 appearance-none cursor-pointer`}
+                      >
+                        {['Weekly', 'Monthly'].map(s => <option key={s}>{s}</option>)}
+                      </select>
+                    </div>
                   </div>
+
+                  {/* Bank Name */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Bank Name</label>
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={settings.bankName}
+                        onChange={e => setSettings(s => ({ ...s, bankName: e.target.value }))}
+                        placeholder="e.g. Deutsche Bank"
+                        className={`${inputCls} pl-9`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Account Holder */}
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">Account Holder Name</label>
+                    <div className="relative">
+                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={settings.accountHolder}
+                        onChange={e => setSettings(s => ({ ...s, accountHolder: e.target.value }))}
+                        placeholder="Full legal name or company"
+                        className={`${inputCls} pl-9`}
+                      />
+                    </div>
+                  </div>
+
+                  {/* IBAN */}
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-400 mb-1.5">
+                      {settings.payoutMethod === 'Bank Transfer' ? 'IBAN / Account Number' : 'Account / Email'}
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.iban}
+                      onChange={e => setSettings(s => ({ ...s, iban: e.target.value }))}
+                      className={inputCls}
+                      placeholder={settings.payoutMethod === 'Bank Transfer' ? 'DE89 3704 0044 ...' : 'account@email.com'}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── Store Status / Vacation Mode ── */}
+              <div className="bg-[#111827] rounded-2xl border border-slate-800/80 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-white">Store Status</h3>
+                    <p className="text-[11px] text-slate-500">Control your store’s availability on the marketplace</p>
+                  </div>
+                </div>
+
+                <div className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
+                  settings.vacationMode
+                    ? 'bg-amber-500/8 border-amber-500/25'
+                    : 'bg-slate-900/60 border-slate-800'
+                }`}>
+                  <div className="flex-1">
+                    <p className={`text-sm font-bold ${ settings.vacationMode ? 'text-amber-300' : 'text-white'}`}>
+                      {settings.vacationMode ? '🏖️ Vacation Mode Active' : 'Store is Live'}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                      {settings.vacationMode
+                        ? 'Your products are temporarily hidden from marketplace search and new orders are paused.'
+                        : 'Enabling Vacation Mode will temporarily hide your products from the marketplace search.'}
+                    </p>
+                  </div>
+
+                  {/* Toggle switch */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={settings.vacationMode}
+                    onClick={() => setSettings(s => ({ ...s, vacationMode: !s.vacationMode }))}
+                    className={`relative ml-5 flex-shrink-0 w-12 h-6 rounded-full transition-colors duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#111827] ${
+                      settings.vacationMode
+                        ? 'bg-amber-500 focus:ring-amber-500'
+                        : 'bg-slate-700 focus:ring-purple-500'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-200 ${
+                        settings.vacationMode ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
 

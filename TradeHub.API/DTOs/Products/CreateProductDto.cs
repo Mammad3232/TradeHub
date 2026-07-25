@@ -23,9 +23,15 @@ public class CreateProductDto
     [Range(1, int.MaxValue, ErrorMessage = "A valid category must be selected.")]
     public int CategoryId { get; set; }
 
+    /// <summary>Optional subcategory (department) ID.</summary>
+    public int? SubcategoryId { get; set; }
+
+    /// <summary>Optional Brand ID.</summary>
+    public int? BrandId { get; set; }
+
     /// <summary>
     /// The image file uploaded from the client (multipart/form-data).
-    /// Allowed types: .jpg, .jpeg, .png, .webp — max 5 MB.
+    /// Allowed types: .jpg, .jpeg, .png, .webp - max 5 MB.
     /// </summary>
     public IFormFile? ImageFile { get; set; }
 }

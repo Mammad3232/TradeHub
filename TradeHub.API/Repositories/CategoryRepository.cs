@@ -16,11 +16,14 @@ public class CategoryRepository : ICategoryRepository
 
     public async Task<IEnumerable<Category>> GetAllAsync()
         => await _db.Categories
+            .Include(c => c.Subcategories)
             .Include(c => c.Products.Where(p => p.IsActive))
             .ToListAsync();
 
     public async Task<Category?> GetByIdAsync(int id)
-        => await _db.Categories.FindAsync(id);
+        => await _db.Categories
+            .Include(c => c.Subcategories)
+            .FirstOrDefaultAsync(c => c.Id == id);
 
     public async Task<Category> CreateAsync(Category category)
     {
@@ -31,4 +34,9 @@ public class CategoryRepository : ICategoryRepository
 
     public async Task<bool> NameExistsAsync(string name)
         => await _db.Categories.AnyAsync(c => c.Name.ToLower() == name.ToLower());
+
+    public async Task<IEnumerable<Subcategory>> GetSubcategoriesByCategoryIdAsync(int categoryId)
+        => await _db.Subcategories
+            .Where(s => s.CategoryId == categoryId)
+            .ToListAsync();
 }

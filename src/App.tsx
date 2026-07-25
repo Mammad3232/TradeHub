@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
 import { Header }   from './components/Header';
 import { Footer }   from './components/Footer';
@@ -32,6 +32,7 @@ import { BlogPage }          from './pages/BlogPage';
 import { CategoryPage }      from './pages/CategoryPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { AdminRoute }        from './components/AdminRoute';
+import { VendorRoute }       from './components/VendorRoute';
 import { ScrollToTop }       from './components/ScrollToTop';
 
 // ── Shared user type (single source of truth for the whole app) ───────────────
@@ -40,6 +41,8 @@ export interface CurrentUser {
   name:       string;
   role:       'Admin' | 'Vendor' | 'Customer' | 'Guest';
   email?:     string;
+  logoUrl?:   string;
+  avatarUrl?: string;
 }
 
 /**
@@ -73,6 +76,8 @@ export function normalizeUser(raw: Record<string, unknown>): CurrentUser | null 
     name:       String(raw.name ?? ''),
     email:      raw.email ? String(raw.email) : undefined,
     role,
+    logoUrl:    raw.logoUrl ? String(raw.logoUrl) : undefined,
+    avatarUrl:  raw.avatarUrl ? String(raw.avatarUrl) : undefined,
   };
 }
 
@@ -109,7 +114,7 @@ const PublicLayout: React.FC<LayoutProps> = ({ currentUser, siteSettings, onSign
     <main className="flex-grow">
       <Outlet />
     </main>
-    <Footer />
+    <Footer currentUser={currentUser} />
   </div>
 );
 
@@ -158,6 +163,16 @@ function App() {
       try {
         const parsed = JSON.parse(savedUser) as CurrentUser;
         if (parsed && typeof parsed === 'object' && parsed.isLoggedIn) {
+          const savedVendorSettings = localStorage.getItem('vendora_vendor_settings');
+          if (savedVendorSettings && !parsed.logoUrl) {
+            try {
+              const vs = JSON.parse(savedVendorSettings);
+              if (vs?.logoUrl) {
+                parsed.logoUrl = vs.logoUrl;
+                parsed.avatarUrl = vs.logoUrl;
+              }
+            } catch {}
+          }
           return parsed;
         }
       } catch {
@@ -211,6 +226,25 @@ function App() {
     });
   };
 
+  // Listen for user state updates (e.g. from Vendor Settings logo changes) to instantly sync global Header
+  useEffect(() => {
+    const handleUserUpdate = () => {
+      const savedUser = localStorage.getItem('vendora_user');
+      if (savedUser) {
+        try {
+          const parsed = JSON.parse(savedUser) as CurrentUser;
+          if (parsed && typeof parsed === 'object' && parsed.isLoggedIn) {
+            setCurrentUser(parsed);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    window.addEventListener('vendora_user_update', handleUserUpdate);
+    return () => window.removeEventListener('vendora_user_update', handleUserUpdate);
+  }, []);
+
   return (
     <ShopProvider>
       <Router>
@@ -247,10 +281,24 @@ function App() {
             <Route path="/search" element={<SearchResultsPage />} />
           </Route>
 
-          {/* ── Vendor Routes ────────────────────────────────────────── */}
-          <Route path="/vendor/dashboard"  element={<VendorDashboard />} />
+          {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}
+          <Route
+            path="/vendor/dashboard"
+            element={
+              <VendorRoute currentUser={currentUser}>
+                <VendorDashboard />
+              </VendorRoute>
+            }
+          />
           <Route element={<VendorLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-            <Route path="/vendor/products"   element={<VendorProducts />} />
+            <Route
+              path="/vendor/products"
+              element={
+                <VendorRoute currentUser={currentUser}>
+                  <VendorProducts />
+                </VendorRoute>
+              }
+            />
           </Route>
 
           {/* ── Admin Routes (protected by AdminRoute guard) ─────────── */}

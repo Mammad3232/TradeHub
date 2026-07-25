@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Store, User, FileText, Mail, ChevronDown, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
+import { LegalModal } from '../components/LegalModal';
 
 interface Country {
   flagUrl: string;
@@ -22,6 +23,16 @@ export const BecomeVendorPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  /* ── Legal Modal State ────────────────────────────────────── */
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'terms' | 'privacy'>('terms');
+
+  const openLegalModal = (type: 'terms' | 'privacy', e: React.MouseEvent) => {
+    e.preventDefault();
+    setModalType(type);
+    setIsLegalModalOpen(true);
+  };
 
   const [selectedCountry, setSelectedCountry] = useState<Country>({
     flagUrl: 'https://flagcdn.com/w20/az.png',
@@ -281,7 +292,22 @@ export const BecomeVendorPage: React.FC = () => {
                 className="w-5 h-5 rounded border-slate-700 bg-[#0B1120] text-amber-500 focus:ring-amber-500 focus:ring-offset-slate-900"
               />
               <span className={`text-sm ${errors.agreedToTerms ? 'text-red-400 font-medium' : 'text-slate-400'}`}>
-                I agree to the <span className="text-indigo-400 hover:underline">Terms of Service</span> and <span className="text-indigo-400 hover:underline">Privacy Policy</span>.
+                I agree to the{' '}
+                <button
+                  type="button"
+                  onClick={(e) => openLegalModal('terms', e)}
+                  className="text-amber-400 hover:underline font-bold cursor-pointer"
+                >
+                  Terms of Service
+                </button>{' '}
+                and{' '}
+                <button
+                  type="button"
+                  onClick={(e) => openLegalModal('privacy', e)}
+                  className="text-amber-400 hover:underline font-bold cursor-pointer"
+                >
+                  Privacy Policy
+                </button>.
               </span>
             </label>
           </div>
@@ -309,6 +335,14 @@ export const BecomeVendorPage: React.FC = () => {
           <p>All registration information is stored securely on encrypted databases.</p>
         </div>
       </div>
+
+      {/* ── Legal Modal ───────────────────────────────────────── */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        type={modalType}
+        onClose={() => setIsLegalModalOpen(false)}
+        onAccept={() => setFormData((prev) => ({ ...prev, agreedToTerms: true }))}
+      />
     </div>
   );
 };

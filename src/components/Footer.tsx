@@ -3,45 +3,78 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag, Compass, Globe, Mail, ArrowUpRight, Send, Heart } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 
-const footerLinks = {
-  Platform: [
-    { label: 'Marketplace',     to: '/' },
-    { label: 'Vendor Portal',   to: '/vendor/dashboard' },
-    { label: 'Admin Dashboard', to: '/admin' },
-    { label: 'My Orders',       to: '/my-orders' },
-  ],
-  Company: [
-    { label: 'About Us', to: '/about' },
-    { label: 'Careers',  to: '/careers' },
-    { label: 'Blog',     to: '/blog' },
-    { label: 'Press',    to: '/press' },
-  ],
-  Support: [
-    { label: 'Help Center',      to: '/help' },
-    { label: 'Contact Us',       to: '/contact' },
-    { label: 'Privacy Policy',   to: '/privacy' },
-    { label: 'Terms of Service', to: '/terms' },
-  ],
-};
+// ── Types ─────────────────────────────────────────────────────────────────────
+export interface FooterUser {
+  isLoggedIn: boolean;
+  role: string;
+}
 
-const socials = [
-  { label: 'Website', Icon: Globe, href: 'https://vendora.store' },
-  { label: 'Explore', Icon: Compass, href: '/deals' },
-  { label: 'Email',   Icon: Mail, href: 'mailto:support@vendora.store' },
+interface FooterProps {
+  currentUser?: FooterUser;
+}
+
+// ── Static link definitions ────────────────────────────────────────────────────
+// `requireRole` — if set, the link is only rendered for matching roles.
+// If absent, the link is always shown.
+const platformLinks: { label: string; to: string; requireRole?: string[] }[] = [
+  { label: 'Marketplace', to: '/' },
+  {
+    label: 'Vendor Portal',
+    to: '/vendor/dashboard',
+    requireRole: ['Vendor', 'Admin', 'Seller'],
+  },
+  {
+    label: 'Admin Dashboard',
+    to: '/admin',
+    requireRole: ['Admin'],
+  },
+  { label: 'My Orders', to: '/my-orders' },
 ];
 
-export const Footer: React.FC = () => {
+const companyLinks = [
+  { label: 'About Us', to: '/about' },
+  { label: 'Careers',  to: '/careers' },
+  { label: 'Blog',     to: '/blog' },
+  { label: 'Press',    to: '/press' },
+];
+
+const supportLinks = [
+  { label: 'Help Center',      to: '/help' },
+  { label: 'Contact Us',       to: '/contact' },
+  { label: 'Privacy Policy',   to: '/privacy' },
+  { label: 'Terms of Service', to: '/terms' },
+];
+
+const socials = [
+  { label: 'Website', Icon: Globe,   href: 'https://vendora.store' },
+  { label: 'Explore', Icon: Compass, href: '/deals' },
+  { label: 'Email',   Icon: Mail,    href: 'mailto:support@vendora.store' },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
+export const Footer: React.FC<FooterProps> = ({ currentUser }) => {
   const { pushToast } = useShop();
   const [newsletterEmail, setNewsletterEmail] = useState('');
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) {
-      return;
-    }
+    if (!newsletterEmail.trim() || !newsletterEmail.includes('@')) return;
     pushToast('Thank you for subscribing to our newsletter!', 'info');
     setNewsletterEmail('');
   };
+
+  /** Filter platform links based on the current user's role */
+  const visiblePlatformLinks = platformLinks.filter((link) => {
+    if (!link.requireRole) return true;                          // always visible
+    if (!currentUser?.isLoggedIn) return false;                  // must be logged in
+    return link.requireRole.includes(currentUser.role);          // role match
+  });
+
+  const footerColumns = [
+    { group: 'Platform', links: visiblePlatformLinks },
+    { group: 'Company',  links: companyLinks },
+    { group: 'Support',  links: supportLinks },
+  ];
 
   return (
     <footer className="bg-slate-950 border-t border-slate-900 text-slate-400">
@@ -78,7 +111,7 @@ export const Footer: React.FC = () => {
           </div>
 
           {/* Link Columns */}
-          {Object.entries(footerLinks).map(([group, links]) => (
+          {footerColumns.map(({ group, links }) => (
             <div key={group} className="space-y-4">
               <h3 className="text-xs font-bold text-slate-200 uppercase tracking-widest">{group}</h3>
               <ul className="space-y-2.5">

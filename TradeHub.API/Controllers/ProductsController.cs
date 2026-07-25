@@ -19,17 +19,25 @@ public class ProductsController : ControllerBase
     }
 
     /// <summary>
-    /// Get all active products. Supports filtering by category, price range, and search term.
+    /// Get all active products. Supports filtering by category, subcategory, price range, brand IDs, minimum rating, and search term.
+    /// Brand IDs can be passed multiple times: ?brandIds=1&amp;brandIds=3
     /// </summary>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? category,
+        [FromQuery] int? subcategoryId,
+        [FromQuery] string? subcategorySlug,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
-        [FromQuery] string? search)
+        [FromQuery] string? search,
+        [FromQuery] List<int>? brandIds,
+        [FromQuery] double? minRating)
     {
-        var products = await _productService.GetAllAsync(category, minPrice, maxPrice, search);
+        var products = await _productService.GetAllAsync(
+            category, minPrice, maxPrice, search,
+            subcategoryId, subcategorySlug,
+            brandIds, minRating);
         return Ok(ApiResponse<IEnumerable<ProductResponseDto>>.Ok(products));
     }
 

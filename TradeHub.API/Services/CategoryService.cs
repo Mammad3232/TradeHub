@@ -21,7 +21,14 @@ public class CategoryService : ICategoryService
         {
             Id = c.Id,
             Name = c.Name,
-            ProductCount = c.Products.Count(p => p.IsActive)
+            ProductCount = c.Products.Count(p => p.IsActive),
+            Subcategories = c.Subcategories.Select(s => new SubcategoryResponseDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Slug = s.Slug,
+                CategoryId = s.CategoryId
+            }).ToList()
         });
     }
 
@@ -37,7 +44,20 @@ public class CategoryService : ICategoryService
         {
             Id = created.Id,
             Name = created.Name,
-            ProductCount = 0
+            ProductCount = 0,
+            Subcategories = new()
         };
+    }
+
+    public async Task<IEnumerable<SubcategoryResponseDto>> GetSubcategoriesByCategoryIdAsync(int categoryId)
+    {
+        var subcategories = await _categoryRepo.GetSubcategoriesByCategoryIdAsync(categoryId);
+        return subcategories.Select(s => new SubcategoryResponseDto
+        {
+            Id = s.Id,
+            Name = s.Name,
+            Slug = s.Slug,
+            CategoryId = s.CategoryId
+        });
     }
 }

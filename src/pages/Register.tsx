@@ -16,6 +16,7 @@ import {
   X,
 } from 'lucide-react';
 import { registerApi } from '../services/authService';
+import { LegalModal } from '../components/LegalModal';
 
 type Role = 'buyer' | 'seller';
 
@@ -44,6 +45,36 @@ export const Register: React.FC = () => {
   const [shaking, setShaking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  /* ── Legal Modal State ────────────────────────────────────── */
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<'terms' | 'privacy'>('terms');
+  const [socialToast, setSocialToast] = useState<string | null>(null);
+  const [socialLoading, setSocialLoading] = useState<'google' | 'github' | null>(null);
+
+  const openLegalModal = (type: 'terms' | 'privacy', e: React.MouseEvent) => {
+    e.preventDefault();
+    setModalType(type);
+    setIsLegalModalOpen(true);
+  };
+
+  /** Shared OAuth placeholder — simulates a network round-trip then shows an in-app notice */
+  const handleSocialLogin = async (
+    provider: 'google' | 'github',
+    e: React.MouseEvent
+  ) => {
+    e.preventDefault();
+    if (socialLoading) return;          // block double-clicks
+    setSocialLoading(provider);
+    // Simulate a brief async round-trip so the spinner feels real
+    await new Promise<void>((resolve) => setTimeout(resolve, 1800));
+    setSocialLoading(null);
+    setSocialToast(provider);
+    setTimeout(() => setSocialToast(null), 4000);
+  };
+
+  const handleGoogleLogin = (e: React.MouseEvent) => handleSocialLogin('google', e);
+  const handleGithubLogin = (e: React.MouseEvent) => handleSocialLogin('github', e);
 
   const set = (key: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -393,8 +424,23 @@ export const Register: React.FC = () => {
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 className="w-4.5 h-4.5 bg-slate-900 border-slate-800 text-purple-650 rounded focus:ring-purple-500 focus:ring-offset-[#060913] cursor-pointer mt-0.5"
               />
-              <label htmlFor="terms" className="text-[11px] font-semibold text-slate-400 cursor-pointer select-none leading-relaxed">
-                I accept the <a href="#" onClick={(e) => { e.preventDefault(); alert('Terms displayed...'); }} className="text-purple-405 hover:underline font-bold">Terms of Service</a> and <a href="#" onClick={(e) => { e.preventDefault(); alert('Privacy Policy...'); }} className="text-purple-405 hover:underline font-bold">Privacy Policy</a>.
+              <label htmlFor="terms" className="text-[11px] font-semibold text-slate-400 select-none leading-relaxed">
+                I accept the{' '}
+                <button
+                  type="button"
+                  onClick={(e) => openLegalModal('terms', e)}
+                  className="text-purple-400 hover:underline font-bold cursor-pointer"
+                >
+                  Terms of Service
+                </button>{' '}
+                and{' '}
+                <button
+                  type="button"
+                  onClick={(e) => openLegalModal('privacy', e)}
+                  className="text-purple-400 hover:underline font-bold cursor-pointer"
+                >
+                  Privacy Policy
+                </button>.
               </label>
             </div>
 
@@ -426,36 +472,96 @@ export const Register: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+              {/* Google */}
               <button
                 type="button"
-                onClick={() => alert('Registering with Google (Simulated)...')}
-                className="flex items-center justify-center gap-2 py-3 border border-slate-800 hover:border-slate-600 bg-[#0E1524]/50 hover:bg-[#0E1524] text-xs font-bold text-slate-300 rounded-xl transition-all cursor-pointer"
+                onClick={handleGoogleLogin}
+                disabled={!!socialLoading}
+                className="relative flex items-center justify-center gap-2 py-3 border border-slate-800 hover:border-slate-600 bg-[#0E1524]/50 hover:bg-[#0E1524] text-xs font-bold text-slate-300 rounded-xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.187 4.114-3.535 0-6.4-2.865-6.4-6.4s2.865-6.4 6.4-6.4c1.582 0 3.027.574 4.15 1.523l3.056-3.056C19.348 2.559 15.992 1.5 12.24 1.5 6.364 1.5 1.5 6.364 1.5 12.24s4.864 10.74 10.74 10.74c5.963 0 10.87-4.29 10.87-10.74 0-.64-.06-1.28-.18-1.955H12.24z"
-                  />
-                </svg>
-                <span>Google</span>
+                {socialLoading === 'google' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 24 24">
+                    <path
+                      fill="#EA4335"
+                      d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.187 4.114-3.535 0-6.4-2.865-6.4-6.4s2.865-6.4 6.4-6.4c1.582 0 3.027.574 4.15 1.523l3.056-3.056C19.348 2.559 15.992 1.5 12.24 1.5 6.364 1.5 1.5 6.364 1.5 12.24s4.864 10.74 10.74 10.74c5.963 0 10.87-4.29 10.87-10.74 0-.64-.06-1.28-.18-1.955H12.24z"
+                    />
+                  </svg>
+                )}
+                <span>{socialLoading === 'google' ? 'Connecting…' : 'Google'}</span>
               </button>
+
+              {/* GitHub */}
               <button
                 type="button"
-                onClick={() => alert('Registering with GitHub (Simulated)...')}
-                className="flex items-center justify-center gap-2 py-3 border border-slate-800 hover:border-slate-600 bg-[#0E1524]/50 hover:bg-[#0E1524] text-xs font-bold text-slate-300 rounded-xl transition-all cursor-pointer"
+                onClick={handleGithubLogin}
+                disabled={!!socialLoading}
+                className="relative flex items-center justify-center gap-2 py-3 border border-slate-800 hover:border-slate-600 bg-[#0E1524]/50 hover:bg-[#0E1524] text-xs font-bold text-slate-300 rounded-xl transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4 fill-slate-300" viewBox="0 0 24 24">
-                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-                </svg>
-                <span>GitHub</span>
+                {socialLoading === 'github' ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                ) : (
+                  <svg className="w-4 h-4 fill-slate-300" viewBox="0 0 24 24">
+                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                  </svg>
+                )}
+                <span>{socialLoading === 'github' ? 'Connecting…' : 'GitHub'}</span>
               </button>
             </div>
           </div>
 
         </div>
       </div>
-      
+
+      {/* ── Social Auth In-App Toast ───────────────────────────── */}
+      {socialToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-scaleUp">
+          <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#0B1120] border border-slate-700/80 shadow-2xl shadow-slate-950/80 backdrop-blur-xl max-w-sm">
+            {/* Provider icon */}
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center">
+              {socialToast === 'google' ? (
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#EA4335" d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.187 4.114-3.535 0-6.4-2.865-6.4-6.4s2.865-6.4 6.4-6.4c1.582 0 3.027.574 4.15 1.523l3.056-3.056C19.348 2.559 15.992 1.5 12.24 1.5 6.364 1.5 1.5 6.364 1.5 12.24s4.864 10.74 10.74 10.74c5.963 0 10.87-4.29 10.87-10.74 0-.64-.06-1.28-.18-1.955H12.24z" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 fill-slate-300" viewBox="0 0 24 24">
+                  <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                </svg>
+              )}
+            </div>
+            {/* Message */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white capitalize">
+                {socialToast} OAuth — Coming Soon
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                Social login is disabled in this environment. Please use email registration.
+              </p>
+            </div>
+            {/* Dismiss */}
+            <button
+              type="button"
+              onClick={() => setSocialToast(null)}
+              className="flex-shrink-0 p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+              aria-label="Dismiss"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Legal Modal ───────────────────────────────────────── */}
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        type={modalType}
+        onClose={() => setIsLegalModalOpen(false)}
+        onAccept={() => setTermsAccepted(true)}
+      />
     </div>
   );
 };
+
 export default Register;
+

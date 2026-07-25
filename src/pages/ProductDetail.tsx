@@ -112,8 +112,14 @@ export const ProductDetail: React.FC = () => {
 
   const sizes = ['128GB', '256GB', '512GB', '1TB'];
 
+  const maxStock = product?.stock ?? product?.stockQuantity;
+
   const handleQuantityChange = (type: 'inc' | 'dec') => {
     if (type === 'inc') {
+      if (maxStock !== undefined && maxStock !== null && maxStock > 0 && quantity >= maxStock) {
+        pushToast(`Maximum available stock reached (Only ${maxStock} item${maxStock > 1 ? 's' : ''} available).`, 'info');
+        return;
+      }
       setQuantity((q) => q + 1);
     } else if (type === 'dec' && quantity > 1) {
       setQuantity((q) => q - 1);
@@ -128,8 +134,10 @@ export const ProductDetail: React.FC = () => {
       id: product.id,
       title: product.title,
       price: product.price,
-      image: product.image,
-      brand: product.vendorName,
+      image: product.image || product.imageUrl,
+      brand: product.vendorName || product.brand || 'Vendora',
+      stock: maxStock,
+      quantity: quantity,
     });
     pushToast(`"${product.title.split(' ').slice(0, 3).join(' ')}…" added to cart!`, 'cart');
     setAddedToCart(true);
@@ -384,7 +392,8 @@ export const ProductDetail: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleQuantityChange('inc')}
-                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                    disabled={maxStock !== undefined && maxStock !== null && maxStock > 0 && quantity >= maxStock}
+                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
                   >
                     <Plus className="h-4.5 w-4.5" />
                   </button>
