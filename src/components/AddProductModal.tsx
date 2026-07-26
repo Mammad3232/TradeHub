@@ -45,6 +45,7 @@ const blankForm = (): CreateProductInput => ({
   description: "",
   price: 0,
   stockQuantity: 0,
+  lowStockThreshold: undefined,
   categoryId: 0,
   subcategoryId: null,
   brandId: null,
@@ -269,6 +270,7 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         description: form.description.trim(),
         price: Number(form.price),
         stockQuantity: Number(form.stockQuantity),
+        lowStockThreshold: form.lowStockThreshold != null && form.lowStockThreshold > 0 ? Number(form.lowStockThreshold) : null,
         categoryId: Number(form.categoryId),
         subcategoryId: form.subcategoryId ? Number(form.subcategoryId) : null,
         brandId: form.brandId ? Number(form.brandId) : null,
@@ -447,8 +449,8 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
             </div>
           </div>
 
-          {/* Price + Stock */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          {/* Price + Stock + Low Stock Threshold */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div>
               <label htmlFor="ap-price" className={labelClass}>
                 Price ($) <span className="text-red-400">*</span>
@@ -484,6 +486,25 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
                   placeholder="50"
                   value={form.stockQuantity || ""}
                   onChange={(e) => set("stockQuantity", Number(e.target.value))}
+                  className={`${inputClass} pl-9`}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="ap-low-stock" className={labelClass}>
+                Low Stock Alert
+              </label>
+              <div className="relative">
+                <AlertCircle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                <input
+                  id="ap-low-stock"
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 5 (0 = Off)"
+                  value={form.lowStockThreshold ?? ""}
+                  onChange={(e) => set("lowStockThreshold", e.target.value === "" ? undefined : Number(e.target.value))}
                   className={`${inputClass} pl-9`}
                   disabled={loading}
                 />

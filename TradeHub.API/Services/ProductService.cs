@@ -12,17 +12,20 @@ public class ProductService : IProductService
     private readonly ICategoryRepository _categoryRepo;
     private readonly IBrandRepository _brandRepo;
     private readonly IWebHostEnvironment _env;
+    private readonly IStockAlertService _stockAlertService;
 
     public ProductService(
         IProductRepository productRepo,
         ICategoryRepository categoryRepo,
         IBrandRepository brandRepo,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        IStockAlertService stockAlertService)
     {
         _productRepo = productRepo;
         _categoryRepo = categoryRepo;
         _brandRepo = brandRepo;
         _env = env;
+        _stockAlertService = stockAlertService;
     }
 
     public async Task<IEnumerable<ProductResponseDto>> GetAllAsync(
@@ -117,6 +120,7 @@ public class ProductService : IProductService
             CategoryId = dto.CategoryId,
             SubcategoryId = dto.SubcategoryId,
             BrandId = dto.BrandId,
+            LowStockThreshold = dto.LowStockThreshold > 0 ? dto.LowStockThreshold : null,
             IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
@@ -140,6 +144,10 @@ public class ProductService : IProductService
         if (dto.ImageUrl is not null)     product.ImageUrl = dto.ImageUrl.Trim();
         if (dto.IsActive.HasValue)        product.IsActive = dto.IsActive.Value;
 
+        // LowStockThreshold: explicit 0 disables alerts (stored as null); positive value sets threshold.
+        if (dto.LowStockThreshold.HasValue)
+            product.LowStockThreshold = dto.LowStockThreshold.Value > 0 ? dto.LowStockThreshold : null;
+
         if (dto.CategoryId.HasValue)
         {
             var category = await _categoryRepo.GetByIdAsync(dto.CategoryId.Value)
@@ -162,6 +170,11 @@ public class ProductService : IProductService
         }
 
         var updated = await _productRepo.UpdateAsync(product);
+
+        // After saving, evaluate whether a low-stock alert should fire OR be resolved.
+        // Non-blocking — a SignalR failure must never roll back the admin's product update.
+        _ = _stockAlertService.CheckAndNotifyAsync(updated);
+
         return MapToDto(updated);
     }
 
@@ -193,6 +206,7 @@ public class ProductService : IProductService
             ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1)
             : 4.5,
         IsActive = p.IsActive,
-        CreatedAt = p.CreatedAt
+        CreatedAt = p.CreatedAt,
+        LowStockThreshold = p.LowStockThreshold,
     };
 }

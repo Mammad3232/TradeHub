@@ -12,6 +12,7 @@ export interface Product {
   description: string;
   price: number;
   stockQuantity: number;
+  lowStockThreshold?: number | null;
   image: string;
   categoryId: number;
   category: string;
@@ -31,6 +32,7 @@ export interface CreateProductInput {
   description: string;
   price: number;
   stockQuantity: number;
+  lowStockThreshold?: number | null;
   categoryId: number;
   subcategoryId?: number | null;
   brandId?: number | null;
@@ -87,6 +89,9 @@ export const createProduct = async (data: CreateProductInput): Promise<Product> 
   formData.append("description", data.description || "");
   formData.append("price", data.price.toString());
   formData.append("stockQuantity", data.stockQuantity.toString());
+  if (data.lowStockThreshold != null) {
+    formData.append("lowStockThreshold", data.lowStockThreshold.toString());
+  }
   formData.append("categoryId", data.categoryId.toString());
   if (data.subcategoryId) {
     formData.append("subcategoryId", data.subcategoryId.toString());

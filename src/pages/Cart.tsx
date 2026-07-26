@@ -19,6 +19,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { createOrder } from '../services/orderService';
 
 export const Cart: React.FC = () => {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ export const Cart: React.FC = () => {
   };
 
   // ── Payment Submission Handler ──────────────────────────────────────────
-  const handlePayNow = (e: React.FormEvent) => {
+  const handlePayNow = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
 
@@ -91,15 +92,47 @@ export const Cart: React.FC = () => {
       return;
     }
 
+    if (cartItems.length === 0) {
+      setFormError('Your shopping cart is currently empty.');
+      return;
+    }
+
     setIsProcessing(true);
 
-    // Simulate 1.5s API payment authorization
-    setTimeout(() => {
+    try {
+      // Check authentication before attempting the order
+      const token = localStorage.getItem('tradehub_token');
+      if (!token) {
+        setIsProcessing(false);
+        setFormError('You must be logged in to place an order. Redirecting to login...');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      const orderPayload = cartItems.map((item) => ({
+        productId: item.id,
+        quantity: item.quantity,
+      }));
+
+      console.log('[Cart] Submitting order to POST /api/orders', orderPayload);
+      console.log('[Cart] JWT token present:', !!token);
+
+      const result = await createOrder(orderPayload);
+      console.log('[Cart] Order created successfully:', result);
+
       clearCart();
       pushToast('Payment Successful! Order Confirmed.', 'cart');
       setIsProcessing(false);
       navigate('/my-orders');
-    }, 1500);
+    } catch (err: any) {
+      setIsProcessing(false);
+      console.error('[Cart] Order submission failed:', err);
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Failed to place order. Please try again.';
+      setFormError(`Error: ${msg}`);
+    }
   };
 
   return (

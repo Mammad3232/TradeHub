@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
 import { AddProductModal } from '../components/AddProductModal';
-import { getProducts, getImageUrl, type Product as ApiProduct } from '../services/productService';
+import { getProducts, updateProduct, deleteProduct, getImageUrl, type Product as ApiProduct } from '../services/productService';
+import { updateUserRoleApi, getAllUsersApi, type UserResponseDto } from '../services/userService';
+import { getMyOrders, updateOrderStatus, type OrderResponse } from '../services/orderService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminVendors } from '../components/AdminVendors';
 import {
@@ -44,6 +46,7 @@ import {
   Mail,
   AlertTriangle as AlertIcon,
   Lock,
+  Pencil,
 } from 'lucide-react';
 
 ChartJS.register(
@@ -80,6 +83,7 @@ interface VendorItem {
 
 interface OrderItem {
   id: string;
+  rawId?: number;
   customer: string;
   email: string;
   date: string;
@@ -103,6 +107,7 @@ interface Product {
   name: string;
   price: number;
   stock: number;
+  lowStockThreshold?: number | null;
   vendor: string;
   category: string;
   status: 'Active' | 'Out of Stock' | 'Draft';
@@ -222,11 +227,69 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     }
   }, [urlTab]);
 
-  // Fetch real dashboard stats from backend API
+  // Fetch real dashboard stats, registered users, products & orders from backend API
   useEffect(() => {
     getDashboardStats()
       .then((data) => setDashboardStats(data))
       .catch(() => { /* fall through to hardcoded fallbacks below */ });
+
+    getAllUsersApi()
+      .then((data) => {
+        const mapped: UserItem[] = data.map((u: UserResponseDto) => ({
+          id: u.id,
+          name: u.fullName,
+          email: u.email,
+          role: (u.role === 'Admin' || u.role === 'Vendor' ? u.role : 'Customer') as 'Admin' | 'Vendor' | 'Customer',
+          joined: u.createdAt ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Jan 12, 2026',
+          orders: 0,
+          status: (u.status === 'Suspended' ? 'Suspended' : 'Active') as 'Active' | 'Suspended',
+        }));
+        setUsers(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load users in AdminDashboard:', err);
+      });
+
+    getProducts()
+      .then((apiProducts: ApiProduct[]) => {
+        const mapped: Product[] = apiProducts.map((p) => ({
+          id: p.id,
+          name: p.title,
+          price: p.price,
+          stock: p.stockQuantity,
+          lowStockThreshold: p.lowStockThreshold ?? null,
+          vendor: p.vendorName || 'TradeHub',
+          category: p.category,
+          image: getImageUrl(p.image),
+          status: p.isActive
+            ? p.stockQuantity === 0
+              ? 'Out of Stock'
+              : 'Active'
+            : 'Draft',
+        }));
+        setProducts(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load products in AdminDashboard:', err);
+      });
+
+    getMyOrders()
+      .then((apiOrders: OrderResponse[]) => {
+        const mapped: OrderItem[] = apiOrders.map((o) => ({
+          id: `#ORD-${o.id}`,
+          rawId: o.id,
+          customer: o.customerName || 'Customer',
+          email: o.customerEmail || '',
+          date: o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+          amount: o.totalPrice,
+          paymentMethod: 'Credit Card',
+          status: (o.status === 'Completed' || o.status === 'Cancelled' ? o.status : 'Pending') as 'Pending' | 'Completed' | 'Cancelled',
+        }));
+        setOrders(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load orders in AdminDashboard:', err);
+      });
   }, []);
 
   const handleTabChange = (newTab: ActiveTab) => {
@@ -234,20 +297,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     navigate(`/admin/${newTab}`, { replace: true });
   };
 
-  // State Management — users persisted to localStorage
-  const [users, setUsers] = useState<UserItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('vendora_admin_users');
-      return saved ? (JSON.parse(saved) as UserItem[]) : initialUsers;
-    } catch {
-      return initialUsers;
-    }
-  });
-
-  // Sync users array to localStorage on every change
-  useEffect(() => {
-    localStorage.setItem('vendora_admin_users', JSON.stringify(users));
-  }, [users]);
+  // State Management — users list
+  const [users, setUsers] = useState<UserItem[]>(initialUsers);
 
   // State Management — vendors persisted to localStorage
   const [vendors, setVendors] = useState<VendorItem[]>(() => {
@@ -282,6 +333,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
           name: p.title,
           price: p.price,
           stock: p.stockQuantity,
+          lowStockThreshold: p.lowStockThreshold ?? null,
           vendor: 'TradeHub',
           category: p.category,
           image: getImageUrl(p.image),
@@ -425,8 +477,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     }
   };
 
-  const handleRoleChange = (id: number, newRole: 'Admin' | 'Vendor' | 'Customer') => {
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+  const handleRoleChange = async (id: number, newRole: 'Admin' | 'Vendor' | 'Customer') => {
+    try {
+      await updateUserRoleApi(id, newRole);
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+    } catch (err) {
+      console.error('Failed to update user role:', err);
+    }
   };
 
   const toggleVendorStatus = (vendorId: number, newStatus: 'Active' | 'Pending' | 'Suspended') => {
@@ -437,8 +494,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     toggleVendorStatus(id, newStatus);
   };
 
-  const handleOrderStatusChange = (id: string, newStatus: 'Pending' | 'Completed' | 'Cancelled') => {
-    setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)));
+  const handleOrderStatusChange = async (id: string, newStatus: 'Pending' | 'Completed' | 'Cancelled') => {
+    const targetOrder = orders.find((o) => o.id === id);
+    const numericId = targetOrder?.rawId || parseInt(id.replace('#ORD-', ''), 10);
+    try {
+      await updateOrderStatus(numericId, newStatus);
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)));
+    } catch (err) {
+      console.error('Failed to update order status:', err);
+    }
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) return;
+    try {
+      await deleteProduct(id);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      console.error('Failed to delete product:', err);
+    }
+  };
+
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editPrice, setEditPrice] = useState('');
+  const [editStock, setEditStock] = useState('');
+  const [editLowStockThreshold, setEditLowStockThreshold] = useState('');
+
+  const handleUpdateProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+    try {
+      const threshold = editLowStockThreshold !== '' ? parseInt(editLowStockThreshold, 10) : 0;
+      await updateProduct(editingProduct.id, {
+        price: parseFloat(editPrice),
+        stockQuantity: parseInt(editStock, 10),
+        lowStockThreshold: threshold > 0 ? threshold : 0,
+      });
+      handleProductCreated();
+      setEditingProduct(null);
+    } catch (err) {
+      console.error('Failed to update product:', err);
+    }
   };
 
   const handleTogglePermission = (id: string, roleKey: 'admin' | 'vendor' | 'customer') => {
@@ -824,8 +920,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                     <th className={thClass}>Product</th>
                     <th className={thClass}>Price</th>
                     <th className={thClass}>Stock</th>
+                    <th className={thClass}>Low Stock Alert</th>
                     <th className={thClass}>Vendor</th>
                     <th className={thClass}>Status</th>
+                    <th className={`${thClass} text-right`}>Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
@@ -841,15 +939,64 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                             )}
                           </div>
                           <div>
-                            <span className="font-bold text-white text-sm block">{p.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white text-sm block">{p.name}</span>
+                              {p.lowStockThreshold && p.lowStockThreshold > 0 && p.stock <= p.lowStockThreshold && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                                  Low stock
+                                </span>
+                              )}
+                            </div>
                             <span className="text-[11px] text-slate-400">{p.category}</span>
                           </div>
                         </div>
                       </td>
                       <td className={tdClass}><span className="font-bold text-white">${p.price.toFixed(2)}</span></td>
-                      <td className={tdClass}><span className="font-bold text-white">{p.stock}</span></td>
+                      <td className={tdClass}>
+                        <span className={`font-bold ${p.lowStockThreshold && p.lowStockThreshold > 0 && p.stock <= p.lowStockThreshold ? 'text-rose-400 font-extrabold' : 'text-white'}`}>
+                          {p.stock}
+                        </span>
+                      </td>
+                      <td className={tdClass}>
+                        {p.lowStockThreshold && p.lowStockThreshold > 0 ? (
+                          <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                            p.stock <= p.lowStockThreshold
+                              ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}>
+                            {p.stock <= p.lowStockThreshold ? '⚠️ ' : ''}Threshold: {p.lowStockThreshold}
+                          </span>
+                        ) : (
+                          <span className="text-slate-600 text-xs">—</span>
+                        )}
+                      </td>
                       <td className={tdClass}><span className="text-indigo-400 font-semibold text-xs">{p.vendor}</span></td>
                       <td className={tdClass}><span className={badgeClass(p.status)}>{p.status}</span></td>
+                      <td className={`${tdClass} text-right`}>
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingProduct(p);
+                              setEditPrice(String(p.price));
+                              setEditStock(String(p.stock));
+                              setEditLowStockThreshold(p.lowStockThreshold ? String(p.lowStockThreshold) : '');
+                            }}
+                            className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-xs font-semibold transition-all border border-indigo-500/10 cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteProduct(p.id)}
+                            className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg text-xs font-semibold transition-all border border-red-500/10 cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1545,6 +1692,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         onClose={() => setIsAddProductModalOpen(false)}
         onSuccess={handleProductCreated}
       />
+
+      {/* ════════════ EDIT PRODUCT MODAL ════════════ */}
+      {editingProduct && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-[#111827] border border-slate-700 rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-bold text-white">Edit Product #{editingProduct.id}</h3>
+              <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-white p-1 cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+            <form onSubmit={handleUpdateProductSubmit} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-400 block mb-1">Product Name</label>
+                <input type="text" disabled value={editingProduct.name} className="w-full bg-slate-900 border border-slate-800 text-slate-400 text-sm rounded-xl px-4 py-2.5" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-400 block mb-1">Price ($)</label>
+                  <input type="number" step="0.01" value={editPrice} onChange={(e) => setEditPrice(e.target.value)} required className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2.5" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-400 block mb-1">Stock Qty</label>
+                  <input type="number" value={editStock} onChange={(e) => setEditStock(e.target.value)} required className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2.5" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-400 block mb-1">Low Stock Alert Threshold <span className="text-slate-600 font-normal">(0 = disabled)</span></label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="e.g. 5"
+                  value={editLowStockThreshold}
+                  onChange={(e) => setEditLowStockThreshold(e.target.value)}
+                  className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-xl px-4 py-2.5"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">When stock drops to or below this number, a low-stock alert notification fires.</p>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setEditingProduct(null)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-medium py-2.5 rounded-xl cursor-pointer">Cancel</button>
+                <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-xl cursor-pointer">Save Changes</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

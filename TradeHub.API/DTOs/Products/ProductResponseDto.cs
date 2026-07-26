@@ -22,4 +22,10 @@ public class ProductResponseDto
     public double Rating { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    /// <summary>Low-stock alert threshold set by the admin. Null means no alert configured.</summary>
+    public int? LowStockThreshold { get; set; }
+
+    /// <summary>Vendor / store name that created this product, if available.</summary>
+    public string? VendorName { get; set; }
 }

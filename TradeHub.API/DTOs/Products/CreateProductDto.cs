@@ -30,6 +30,13 @@ public class CreateProductDto
     public int? BrandId { get; set; }
 
     /// <summary>
+    /// Optional low-stock alert threshold. When StockQuantity reaches or drops below
+    /// this number, a LowStock notification is fired. Leave null (or 0) to disable.
+    /// </summary>
+    [Range(0, int.MaxValue)]
+    public int? LowStockThreshold { get; set; }
+
+    /// <summary>
     /// The image file uploaded from the client (multipart/form-data).
     /// Allowed types: .jpg, .jpeg, .png, .webp - max 5 MB.
     /// </summary>

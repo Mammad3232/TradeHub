@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Users, Search, Shield, Store, UserCircle, Lock, Unlock } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Search, Shield, Store, UserCircle, Lock, Unlock, Loader2 } from 'lucide-react';
+import { getAllUsersApi, type UserResponseDto } from '../services/userService';
 
 interface SystemUser {
   id: number;
@@ -9,14 +10,6 @@ interface SystemUser {
   status: 'Active' | 'Suspended';
   joined: string;
 }
-
-const initialUsers: SystemUser[] = [
-  { id: 1, name: 'Aida Mammadova',  email: 'aida@example.com',    role: 'Customer', status: 'Active',    joined: '2026-01-12' },
-  { id: 2, name: 'Murad Hasanov',   email: 'murad@example.com',   role: 'Vendor',   status: 'Active',    joined: '2026-02-05' },
-  { id: 3, name: 'Sara Aliyeva',    email: 'sara@example.com',    role: 'Customer', status: 'Suspended', joined: '2026-03-18' },
-  { id: 4, name: 'Elvin Jafarov',   email: 'elvin@example.com',   role: 'Vendor',   status: 'Active',    joined: '2026-06-30' },
-  { id: 5, name: 'Nigar Quliyeva',  email: 'nigar@example.com',   role: 'Admin',    status: 'Active',    joined: '2025-11-01' },
-];
 
 const roleIcon = {
   Admin: Shield,
@@ -31,8 +24,30 @@ const roleColors = {
 };
 
 export const AdminUsers: React.FC = () => {
-  const [users, setUsers] = useState<SystemUser[]>(initialUsers);
+  const [users, setUsers] = useState<SystemUser[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    getAllUsersApi()
+      .then((data) => {
+        const mapped: SystemUser[] = data.map((u: UserResponseDto) => ({
+          id: u.id,
+          name: u.fullName,
+          email: u.email,
+          role: (u.role === 'Admin' || u.role === 'Vendor' ? u.role : 'Customer') as 'Customer' | 'Vendor' | 'Admin',
+          status: (u.status === 'Suspended' ? 'Suspended' : 'Active') as 'Active' | 'Suspended',
+          joined: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : '2026-01-01',
+        }));
+        setUsers(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load users from API:', err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const toggleStatus = (id: number) => {
     setUsers((prev) =>

@@ -204,6 +204,47 @@ namespace TradeHub.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("RelatedOrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RelatedProductId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("NewOrder");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RelatedOrderId");
+
+                    b.HasIndex("RelatedProductId");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Order", b =>
                 {
                     b.Property<int>("Id")
@@ -510,6 +551,9 @@ namespace TradeHub.API.Migrations
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<int?>("LowStockThreshold")
+                        .HasColumnType("int");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1916,6 +1960,23 @@ namespace TradeHub.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.Notification", b =>
+                {
+                    b.HasOne("TradeHub.API.Models.Order", "RelatedOrder")
+                        .WithMany()
+                        .HasForeignKey("RelatedOrderId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TradeHub.API.Models.Product", "RelatedProduct")
+                        .WithMany("Notifications")
+                        .HasForeignKey("RelatedProductId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("RelatedOrder");
+
+                    b.Navigation("RelatedProduct");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Order", b =>
                 {
                     b.HasOne("TradeHub.API.Models.User", "User")
@@ -2020,6 +2081,8 @@ namespace TradeHub.API.Migrations
 
             modelBuilder.Entity("TradeHub.API.Models.Product", b =>
                 {
+                    b.Navigation("Notifications");
+
                     b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");

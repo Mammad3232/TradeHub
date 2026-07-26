@@ -22,6 +22,7 @@ import {
   Check,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { AdminNotificationBell } from './AdminNotificationBell';
 
 export interface HeaderCurrentUser {
   isLoggedIn: boolean;
@@ -473,16 +474,19 @@ export const Header: React.FC<HeaderProps> = ({
                 )}
               </div>
 
-              {/* Role-based shortcut pills */}
+              {/* Role-based shortcut pills & Admin Notifications */}
               {currentUser?.isLoggedIn && currentUser?.role === 'Admin' && (
-                <Link
-                  to="/admin"
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/25 bg-red-500/5 text-red-400 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-300 transition-all text-xs font-bold"
-                  title="Admin Panel"
-                >
-                  <Shield className="w-3.5 h-3.5" />
-                  <span>Admin</span>
-                </Link>
+                <>
+                  <AdminNotificationBell />
+                  <Link
+                    to="/admin"
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/25 bg-red-500/5 text-red-400 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-300 transition-all text-xs font-bold"
+                    title="Admin Panel"
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    <span>Admin</span>
+                  </Link>
+                </>
               )}
               {currentUser?.isLoggedIn && currentUser?.role === 'Vendor' && (
                 <Link

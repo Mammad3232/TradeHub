@@ -15,6 +15,7 @@ public class AppDbContext : DbContext
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -69,6 +70,9 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Description).HasMaxLength(2000);
             entity.Property(p => p.Price).HasColumnType("decimal(18,2)");
             entity.Property(p => p.ImageUrl).HasMaxLength(500);
+
+            // Nullable — null / 0 means "no threshold configured"
+            entity.Property(p => p.LowStockThreshold).IsRequired(false);
 
             // Many products belong to one category
             entity.HasOne(p => p.Category)
@@ -137,6 +141,33 @@ public class AppDbContext : DbContext
                   .WithMany(u => u.Reviews)
                   .HasForeignKey(r => r.UserId)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Notification Configuration
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(n => n.Id);
+            entity.Property(n => n.Message).IsRequired().HasMaxLength(500);
+            entity.Property(n => n.Type)
+                  .IsRequired()
+                  .HasMaxLength(50)
+                  .HasDefaultValue(NotificationType.NewOrder);
+
+            // Notifications survive even if the related order is deleted (SetNull)
+            entity.HasOne(n => n.RelatedOrder)
+                  .WithMany()
+                  .HasForeignKey(n => n.RelatedOrderId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            // CRITICAL: Notifications survive even if the related product is deleted (SetNull)
+            // Without this, deleting a product that has LowStock notifications would throw a
+            // FK constraint violation.
+            entity.HasOne(n => n.RelatedProduct)
+                  .WithMany(p => p.Notifications)
+                  .HasForeignKey(n => n.RelatedProductId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Seed Data

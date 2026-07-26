@@ -26,4 +26,11 @@ public class UpdateProductDto
     public int? BrandId { get; set; }
 
     public bool? IsActive { get; set; }
+
+    /// <summary>
+    /// Optional low-stock alert threshold. Set to 0 to disable alerts for this product.
+    /// Omit the field entirely (null) to leave the existing threshold unchanged.
+    /// </summary>
+    [Range(0, int.MaxValue)]
+    public int? LowStockThreshold { get; set; }
 }

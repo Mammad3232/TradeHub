@@ -149,6 +149,9 @@ const AdminLayout: React.FC<LayoutProps> = ({ currentUser, siteSettings, onSignO
 // ── App ───────────────────────────────────────────────────────────────────────
 
 import { ShopProvider } from './context/ShopContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { AdminOrderToastContainer } from './components/AdminOrderToastContainer';
+import { RoleUpdateToast }         from './components/RoleUpdateToast';
 import { logoutApi } from './services/authService';
 
 function App() {
@@ -248,90 +251,96 @@ function App() {
   return (
     <ShopProvider>
       <Router>
-        <ScrollToTop />
-        <Routes>
-          {/* ── Public Routes (Navbar + Footer) ────────────────────────── */}
-          <Route element={<PublicLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-            <Route path="/"               element={<Home />} />
-            <Route path="/product/:id"    element={<ProductDetail />} />
-            <Route path="/login"          element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
-            <Route path="/auth"           element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
-            <Route path="/register"       element={<Register />} />
-            <Route path="/verify-code"    element={<VerifyCode />} />
-            <Route path="/reset-password" element={<ResetPassword />} />
+        <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
+          <>
+            <AdminOrderToastContainer />
+            <RoleUpdateToast />
+            <ScrollToTop />
+            <Routes>
+              {/* ── Public Routes (Navbar + Footer) ────────────────────────── */}
+              <Route element={<PublicLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                <Route path="/"               element={<Home />} />
+                <Route path="/product/:id"    element={<ProductDetail />} />
+                <Route path="/login"          element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
+                <Route path="/auth"           element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
+                <Route path="/register"       element={<Register />} />
+                <Route path="/verify-code"    element={<VerifyCode />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-            {/* ── Customer Routes ──────────────────────────────────────── */}
-            <Route path="/cart"            element={<Cart />} />
-            <Route path="/wishlist"        element={<WishlistPage />} />
-            <Route path="/checkout"        element={<Checkout />} />
-            <Route path="/my-orders"       element={<MyOrders />} />
-            <Route path="/deals"           element={<DealsPage />} />
-            <Route path="/vendors"         element={<VendorsPage />} />
-            <Route path="/new-arrivals"    element={<NewArrivalsPage />} />
-            <Route path="/vendor-register" element={<BecomeVendorPage />} />
-            <Route path="/contact"         element={<ContactPage />} />
-            <Route path="/about"           element={<AboutPage />} />
-            <Route path="/careers"         element={<CareersPage />} />
-            <Route path="/blog"            element={<BlogPage />} />
-            <Route path="/press"           element={<BlogPage />} />
-            <Route path="/help"            element={<HelpPage />} />
-            <Route path="/privacy"         element={<LegalPage type="privacy" />} />
-            <Route path="/terms"           element={<LegalPage type="terms" />} />
-            <Route path="/category/:categoryName" element={<CategoryPage />} />
-            <Route path="/search" element={<SearchResultsPage />} />
-          </Route>
+                {/* ── Customer Routes ──────────────────────────────────────── */}
+                <Route path="/cart"            element={<Cart />} />
+                <Route path="/wishlist"        element={<WishlistPage />} />
+                <Route path="/checkout"        element={<Checkout />} />
+                <Route path="/my-orders"       element={<MyOrders />} />
+                <Route path="/deals"           element={<DealsPage />} />
+                <Route path="/vendors"         element={<VendorsPage />} />
+                <Route path="/new-arrivals"    element={<NewArrivalsPage />} />
+                <Route path="/vendor-register" element={<BecomeVendorPage />} />
+                <Route path="/contact"         element={<ContactPage />} />
+                <Route path="/about"           element={<AboutPage />} />
+                <Route path="/careers"         element={<CareersPage />} />
+                <Route path="/blog"            element={<BlogPage />} />
+                <Route path="/press"           element={<BlogPage />} />
+                <Route path="/help"            element={<HelpPage />} />
+                <Route path="/privacy"         element={<LegalPage type="privacy" />} />
+                <Route path="/terms"           element={<LegalPage type="terms" />} />
+                <Route path="/category/:categoryName" element={<CategoryPage />} />
+                <Route path="/search"          element={<SearchResultsPage />} />
+              </Route>
 
-          {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}
-          <Route
-            path="/vendor/dashboard"
-            element={
-              <VendorRoute currentUser={currentUser}>
-                <VendorDashboard />
-              </VendorRoute>
-            }
-          />
-          <Route element={<VendorLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-            <Route
-              path="/vendor/products"
-              element={
-                <VendorRoute currentUser={currentUser}>
-                  <VendorProducts />
-                </VendorRoute>
-              }
-            />
-          </Route>
+              {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}
+              <Route
+                path="/vendor/dashboard"
+                element={
+                  <VendorRoute currentUser={currentUser}>
+                    <VendorDashboard />
+                  </VendorRoute>
+                }
+              />
+              <Route element={<VendorLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                <Route
+                  path="/vendor/products"
+                  element={
+                    <VendorRoute currentUser={currentUser}>
+                      <VendorProducts />
+                    </VendorRoute>
+                  }
+                />
+              </Route>
 
-          {/* ── Admin Routes (protected by AdminRoute guard) ─────────── */}
-          <Route element={<AdminLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-            <Route
-              path="/admin"
-              element={
-                <AdminRoute currentUser={currentUser}>
-                  <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/:tab"
-              element={
-                <AdminRoute currentUser={currentUser}>
-                  <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="/admin/*"
-              element={
-                <AdminRoute currentUser={currentUser}>
-                  <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                </AdminRoute>
-              }
-            />
-          </Route>
+              {/* ── Admin Routes (protected by AdminRoute guard) ─────────── */}
+              <Route element={<AdminLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute currentUser={currentUser}>
+                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/:tab"
+                  element={
+                    <AdminRoute currentUser={currentUser}>
+                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/*"
+                  element={
+                    <AdminRoute currentUser={currentUser}>
+                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                    </AdminRoute>
+                  }
+                />
+              </Route>
 
-          {/* ── 404 Catch-All ──────────────────────────────────────────── */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+              {/* ── 404 Catch-All ──────────────────────────────────────────── */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </>
+        </NotificationProvider>
       </Router>
     </ShopProvider>
   );

@@ -1,8 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using TradeHub.API.Data;
+using TradeHub.API.Hubs;
 using TradeHub.API.Middlewares;
 using TradeHub.API.Repositories;
 using TradeHub.API.Repositories.Interfaces;
@@ -23,11 +25,13 @@ builder.Services.AddScoped<IBrandRepository, BrandRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IStockAlertService, StockAlertService>();
 
 // ── 3. JWT Authentication ────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
@@ -51,13 +55,32 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
         ClockSkew                = TimeSpan.Zero
     };
+
+    // SignalR uses WebSockets which cannot attach Authorization headers.
+    // The JS client sends the JWT as ?access_token=... on the hub URL instead.
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) &&
+                path.StartsWithSegments("/hubs"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
-// ── 4. CORS Policy ─────────────────────────────────────────────────────────────
-// AllowAnyOrigin is used for local development so that any Vite port works.
-// NOTE: AllowAnyOrigin and AllowCredentials are mutually exclusive in ASP.NET Core —
-// using both will cause a runtime exception. For production, replace AllowAnyOrigin
-// with a specific allow-list and add .AllowCredentials().
+// ── 4. CORS Policies ───────────────────────────────────────────────────────────
+// "AllowFrontend" — used by all REST endpoints. AllowAnyOrigin is fine here because
+// REST calls don't require credentials. This keeps the dev-server flexibility.
+//
+// "AllowSignalR" — used exclusively by the /hubs/* routes. SignalR's WebSocket
+// handshake requires AllowCredentials(), which is mutually exclusive with
+// AllowAnyOrigin(). We must name the exact origin(s) explicitly.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -66,9 +89,24 @@ builder.Services.AddCors(options =>
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
+
+    options.AddPolicy("AllowSignalR", policy =>
+    {
+        policy.WithOrigins(
+                  "http://localhost:5173",   // Vite default
+                  "https://localhost:5173"   // Vite HTTPS (if used)
+              )
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();           // Required for SignalR
+    });
 });
 
-// ── 5. Controllers & Swagger ──────────────────────────────────────────────────
+// ── 5. Controllers, SignalR & Swagger ─────────────────────────────────────────
+// CustomUserIdProvider maps SignalR connections to authenticated user IDs (from JWT "userId" claim)
+// so _hubContext.Clients.User(userId) correctly targets individual user sessions.
+builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
+builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
@@ -104,6 +142,38 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
+// ── Startup Seed/Stock Guarantee ──────────────────────────────────────────────
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var products = await db.Products.ToListAsync();
+        bool changed = false;
+        foreach (var p in products)
+        {
+            if (p.StockQuantity < 100)
+            {
+                p.StockQuantity = 100;
+                changed = true;
+            }
+            if (!p.IsActive)
+            {
+                p.IsActive = true;
+                changed = true;
+            }
+        }
+        if (changed)
+        {
+            await db.SaveChangesAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Startup] Error ensuring product stock: {ex.Message}");
+    }
+}
+
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
 // 1. CORS MUST be the very first middleware so headers are attached to all responses (including errors/redirects)
 app.UseCors("AllowFrontend");
@@ -127,4 +197,10 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// ── SignalR Hub Route ──────────────────────────────────────────────────────────
+// Apply the SignalR-specific CORS policy (AllowCredentials) only to this route.
+app.MapHub<OrderHub>("/hubs/orders")
+   .RequireCors("AllowSignalR");
+
 app.Run();

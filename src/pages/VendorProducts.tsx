@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Package, Plus, Edit, Trash2, X, DollarSign, Tag, Archive, Loader2, AlertCircle } from 'lucide-react';
-import { getProducts, createProduct, deleteProduct, type Product } from '../services/productService';
+import { getProducts, createProduct, updateProduct, deleteProduct, type Product } from '../services/productService';
 import apiClient from '../services/apiClient';
 
 interface VendorProduct {
@@ -25,6 +25,7 @@ export const VendorProducts: React.FC = () => {
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<VendorProduct | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,7 +84,18 @@ export const VendorProducts: React.FC = () => {
     }
   };
 
-  const handleAddProduct = async (e: React.FormEvent) => {
+  const handleStartEdit = (p: VendorProduct) => {
+    setEditingProduct(p);
+    setTitle(p.title);
+    setCategory(p.category || 'Electronics');
+    setPrice(p.price.toString());
+    setStock(p.stock.toString());
+    setDescription('');
+    setImageUrl(p.image);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title || !price || !stock) return;
 
@@ -92,29 +104,31 @@ export const VendorProducts: React.FC = () => {
 
     try {
       const categoryId = categoryMap[category] ?? 1;
-      const created = await createProduct({
-        name: title,
-        description: description || `${title} — quality product.`,
-        price: parseFloat(price),
-        stockQuantity: parseInt(stock, 10),
-        imageUrl: imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&auto=format&fit=crop&q=60',
-        categoryId,
-      });
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, {
+          name: title,
+          description: description || undefined,
+          price: parseFloat(price),
+          stockQuantity: parseInt(stock, 10),
+          categoryId,
+          imageUrl: imageUrl || undefined,
+        });
+      } else {
+        await createProduct({
+          name: title,
+          description: description || `${title} — quality product.`,
+          price: parseFloat(price),
+          stockQuantity: parseInt(stock, 10),
+          imageUrl: imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&auto=format&fit=crop&q=60',
+          categoryId,
+        });
+      }
 
-      setProducts((prev) => [
-        {
-          id: created.id,
-          title: created.title,
-          category: created.category,
-          price: created.price,
-          stock: created.stockQuantity,
-          image: created.image,
-        },
-        ...prev,
-      ]);
+      await loadProducts();
 
       // Reset form
       setIsModalOpen(false);
+      setEditingProduct(null);
       setTitle('');
       setCategory('Electronics');
       setPrice('');
@@ -122,7 +136,7 @@ export const VendorProducts: React.FC = () => {
       setDescription('');
       setImageUrl('');
     } catch (err: any) {
-      setError(err.message || 'Failed to create product.');
+      setError(err.message || 'Failed to save product.');
     } finally {
       setSubmitting(false);
     }
@@ -228,7 +242,7 @@ export const VendorProducts: React.FC = () => {
                         <button
                           className="inline-flex items-center text-slate-400 hover:text-indigo-400 hover:bg-indigo-500/10 p-2 rounded-lg transition-colors cursor-pointer"
                           title="Edit"
-                          onClick={() => alert(`Edit product #${p.id} — full edit modal coming in next iteration.`)}
+                          onClick={() => handleStartEdit(p)}
                         >
                           <Edit className="h-4 w-4" />
                         </button>
@@ -249,17 +263,17 @@ export const VendorProducts: React.FC = () => {
         </div>
       </div>
 
-      {/* ── Add Product Modal ─────────────────────────────── */}
+      {/* ── Add / Edit Product Modal ─────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-[#111827] border border-slate-700 rounded-3xl p-8 w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-lg font-bold text-white">New Product</h2>
+                <h2 className="text-lg font-bold text-white">{editingProduct ? `Edit Product #${editingProduct.id}` : 'New Product'}</h2>
                 <p className="text-xs text-slate-400 mt-0.5">Saved directly to the marketplace database.</p>
               </div>
               <button
-                onClick={() => { setIsModalOpen(false); setError(null); }}
+                onClick={() => { setIsModalOpen(false); setEditingProduct(null); setError(null); }}
                 className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
               >
                 <X className="h-5 w-5" />
@@ -272,7 +286,7 @@ export const VendorProducts: React.FC = () => {
               </div>
             )}
 
-            <form onSubmit={handleAddProduct} className="space-y-4">
+            <form onSubmit={handleSaveProduct} className="space-y-4">
               {/* Product Name */}
               <div>
                 <label className="block text-xs font-semibold text-slate-400 mb-1.5">Product Name *</label>

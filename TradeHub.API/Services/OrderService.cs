@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using TradeHub.API.Data;
 using TradeHub.API.DTOs.Orders;
+using TradeHub.API.Hubs;
 using TradeHub.API.Models;
 using TradeHub.API.Repositories.Interfaces;
 using TradeHub.API.Services.Interfaces;
@@ -12,12 +14,21 @@ public class OrderService : IOrderService
     private readonly IOrderRepository _orderRepo;
     private readonly AppDbContext _db;
     private readonly IEmailService _emailService;
+    private readonly IHubContext<OrderHub> _hubContext;
+    private readonly IStockAlertService _stockAlertService;
 
-    public OrderService(IOrderRepository orderRepo, AppDbContext db, IEmailService emailService)
+    public OrderService(
+        IOrderRepository orderRepo,
+        AppDbContext db,
+        IEmailService emailService,
+        IHubContext<OrderHub> hubContext,
+        IStockAlertService stockAlertService)
     {
         _orderRepo = orderRepo;
         _db = db;
         _emailService = emailService;
+        _hubContext = hubContext;
+        _stockAlertService = stockAlertService;
     }
 
     public async Task<OrderResponseDto> CreateAsync(CreateOrderDto dto, int userId)
@@ -39,9 +50,11 @@ public class OrderService : IOrderService
         {
             var product = products.First(p => p.Id == item.ProductId);
 
+            // Ensure sufficient stock
             if (product.StockQuantity < item.Quantity)
-                throw new InvalidOperationException(
-                    $"Insufficient stock for '{product.Name}'. Available: {product.StockQuantity}, Requested: {item.Quantity}.");
+            {
+                throw new InvalidOperationException($"Insufficient stock for '{product.Name}'. Only {product.StockQuantity} item(s) available.");
+            }
 
             orderItems.Add(new OrderItem
             {
@@ -73,7 +86,14 @@ public class OrderService : IOrderService
         var created = await _orderRepo.GetByIdAsync(order.Id)
             ?? throw new Exception("Order was created but could not be retrieved.");
 
-        // 6. Send order confirmation email (non-blocking — failure never crashes the order)
+        // 6. Send real-time SignalR notification to all connected Admins
+        await NotifyAdminsAsync(created);
+
+        // 7. Check low-stock threshold for every affected product
+        foreach (var product in products)
+            await _stockAlertService.CheckAndNotifyAsync(product);
+
+        // 8. Send order confirmation email (non-blocking — failure never crashes the order)
         var user = await _db.Users.FindAsync(userId);
         if (user is not null)
         {
@@ -89,6 +109,47 @@ public class OrderService : IOrderService
         }
 
         return MapToDto(created);
+    }
+
+    // ── SignalR + Notification persistence ─────────────────────────────────────
+
+    private async Task NotifyAdminsAsync(Order order)
+    {
+        var customerName = order.User?.FullName ?? "A customer";
+        var message = $"New order #{order.Id} from {customerName} — ${order.TotalPrice:F2}";
+
+        // a) Push live event to every Admin who is currently connected
+        try
+        {
+            await _hubContext.Clients.Group("Admins").SendAsync("NewOrderReceived", new
+            {
+                orderId     = order.Id,
+                customerName,
+                totalPrice  = order.TotalPrice,
+                createdAt   = order.OrderDate
+            });
+        }
+        catch
+        {
+            // SignalR failure must never crash the order flow — log in production
+        }
+
+        // b) Persist notification row so offline admins see it on next login
+        try
+        {
+            _db.Notifications.Add(new Notification
+            {
+                Message        = message,
+                IsRead         = false,
+                CreatedAt      = DateTime.UtcNow,
+                RelatedOrderId = order.Id
+            });
+            await _db.SaveChangesAsync();
+        }
+        catch
+        {
+            // DB failure must also never crash the order flow
+        }
     }
 
     public async Task<IEnumerable<OrderResponseDto>> GetAllAsync(int userId, string userRole)
