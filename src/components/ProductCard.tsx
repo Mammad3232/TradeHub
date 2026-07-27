@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Star, Store, ShoppingCart, Heart, Eye } from 'lucide-react';
 import type { Product } from '../services/api';
+import { useShop } from '../context/ShopContext';
 
 // ── Image URL resolver ────────────────────────────────────────────────────────
 // If the backend returns a relative path (e.g. /uploads/products/xyz.jpg),
@@ -51,13 +52,48 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 // ── Card ─────────────────────────────────────────────────────────────────────
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
-  const [wishlisted, setWishlisted] = useState(false);
+  const { addToCart, pushToast, toggleWishlist, isWishlisted } = useShop();
+  const isWish = isWishlisted ? isWishlisted(product.id) : false;
+  const [wishlisted, setWishlisted] = useState(isWish);
   const [addedToCart, setAddedToCart] = useState(false);
   const [imgSrc, setImgSrc] = useState(() => resolveImage(product.image));
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    const itemTitle = product.title || (product as any).name || 'Product';
+    const availableStock = product.stockQuantity ?? (product as any).stock ?? 50;
+
+    addToCart({
+      id: product.id,
+      title: itemTitle,
+      brand: product.brand || '',
+      price: product.price,
+      image: product.image,
+      stock: availableStock,
+      stockQuantity: availableStock,
+    });
+
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 1800);
+    pushToast(`"${itemTitle.split(' ').slice(0, 3).join(' ')}..." added to cart!`, 'cart');
+  };
+
+  const handleToggleWishlist = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setWishlisted((v) => !v);
+    if (toggleWishlist) {
+      toggleWishlist({
+        id: product.id,
+        title: product.title || (product as any).name || 'Product',
+        brand: product.brand || '',
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        rating: product.rating,
+      });
+    }
   };
 
   return (
@@ -88,7 +124,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         {/* Wishlist button */}
         <button
-          onClick={() => setWishlisted((v) => !v)}
+          onClick={handleToggleWishlist}
           className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/70 backdrop-blur-sm border border-slate-700/50 text-slate-400 hover:text-white transition-all hover:scale-110"
           aria-label="Wishlist"
         >

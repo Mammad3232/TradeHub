@@ -12,7 +12,8 @@ public interface IProductRepository
         int? subcategoryId = null,
         string? subcategorySlug = null,
         IEnumerable<int>? brandIds = null,
-        double? minRating = null);
+        double? minRating = null,
+        int? categoryId = null);
     Task<Product?> GetByIdAsync(int id);
     Task<Product> CreateAsync(Product product);
     Task<Product> UpdateAsync(Product product);

@@ -26,18 +26,25 @@ public class ProductsController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductResponseDto>>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? category,
+        [FromQuery] int? categoryId,
         [FromQuery] int? subcategoryId,
         [FromQuery] string? subcategorySlug,
         [FromQuery] decimal? minPrice,
         [FromQuery] decimal? maxPrice,
         [FromQuery] string? search,
+        [FromQuery] string? searchTerm,
+        [FromQuery] string? searchQuery,
         [FromQuery] List<int>? brandIds,
         [FromQuery] double? minRating)
     {
+        var effectiveSearch = !string.IsNullOrWhiteSpace(searchTerm)
+            ? searchTerm
+            : (!string.IsNullOrWhiteSpace(searchQuery) ? searchQuery : search);
+
         var products = await _productService.GetAllAsync(
-            category, minPrice, maxPrice, search,
+            category, minPrice, maxPrice, effectiveSearch,
             subcategoryId, subcategorySlug,
-            brandIds, minRating);
+            brandIds, minRating, categoryId);
         return Ok(ApiResponse<IEnumerable<ProductResponseDto>>.Ok(products));
     }
 

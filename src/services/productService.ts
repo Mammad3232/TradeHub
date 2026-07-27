@@ -42,11 +42,13 @@ export interface CreateProductInput {
 
 export interface ProductFilterParams {
   category?: string;
+  categoryId?: number;
   subcategoryId?: number;
   subcategorySlug?: string;
   minPrice?: number;
   maxPrice?: number;
   search?: string;
+  searchTerm?: string;
   /** Multi-select brand IDs sent as repeated query params: ?brandIds=1&brandIds=2 */
   brandIds?: number[];
   /** Minimum average rating floor (e.g. 4 = "4 stars & up") */
@@ -60,12 +62,14 @@ export const getProducts = async (params?: ProductFilterParams): Promise<Product
 
   // Build URLSearchParams manually to support repeated keys for brandIds array
   const qs = new URLSearchParams();
-  if (params.category)       qs.set('category', params.category);
-  if (params.subcategoryId)  qs.set('subcategoryId', String(params.subcategoryId));
-  if (params.subcategorySlug) qs.set('subcategorySlug', params.subcategorySlug);
+  if (params.category)        qs.set('category', params.category);
+  if (params.categoryId)      qs.set('categoryId', String(params.categoryId));
+  if (params.subcategoryId)   qs.set('subcategoryId', String(params.subcategoryId));
+  if (params.subcategorySlug)  qs.set('subcategorySlug', params.subcategorySlug);
   if (params.minPrice != null) qs.set('minPrice', String(params.minPrice));
   if (params.maxPrice != null) qs.set('maxPrice', String(params.maxPrice));
-  if (params.search)         qs.set('search', params.search);
+  if (params.searchTerm)      qs.set('searchTerm', params.searchTerm);
+  else if (params.search)     qs.set('search', params.search);
   if (params.minRating != null) qs.set('minRating', String(params.minRating));
   // Repeat brandIds as separate keys so ASP.NET Core binds them as List<int>
   if (params.brandIds?.length) {

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import mockProducts from '../mocks/products.json';
+import { getProducts, type Product } from '../services/api';
 import {
   Search,
   Heart,
@@ -24,6 +25,24 @@ import {
 import { useShop } from '../context/ShopContext';
 import { AdminNotificationBell } from './AdminNotificationBell';
 
+const BACKEND_ORIGIN = 'http://localhost:5229';
+
+const PLACEHOLDER_IMAGE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E" +
+  "%3Crect width='400' height='300' fill='%230f172a'/%3E" +
+  "%3Crect x='160' y='100' width='80' height='60' rx='8' fill='%231e293b'/%3E" +
+  "%3Ccircle cx='185' cy='120' r='8' fill='%2334d399' opacity='.4'/%3E" +
+  "%3Cpolygon points='175,150 205,130 205,150' fill='%2334d399' opacity='.4'/%3E" +
+  "%3C/svg%3E";
+
+const resolveProductImage = (raw?: string): string => {
+  if (!raw) return PLACEHOLDER_IMAGE;
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('blob:') || raw.startsWith('data:')) {
+    return raw;
+  }
+  return `${BACKEND_ORIGIN}${raw.startsWith('/') ? '' : '/'}${raw}`;
+};
+
 export interface HeaderCurrentUser {
   isLoggedIn: boolean;
   role: string;
@@ -34,10 +53,8 @@ export interface HeaderCurrentUser {
 }
 
 interface HeaderProps {
-  cartCount?: number;      // kept for prop-compat; context takes priority
-  wishlistCount?: number;  // kept for prop-compat; context takes priority
   currentUser?: HeaderCurrentUser;
-  siteSettings?: { siteName: string };
+  siteSettings?: { siteName?: string };
   onSignOut?: () => void;
 }
 
@@ -109,19 +126,63 @@ export const Header: React.FC<HeaderProps> = ({
   const profileRef  = useRef<HTMLDivElement>(null);
   const miniCartRef = useRef<HTMLDivElement>(null);
 
-  // Filter top 5 live autocomplete suggestions based on query
-  const liveSuggestions = useMemo(() => {
-    if (query.trim().length < 2) return [];
-    const term = query.toLowerCase().trim();
-    return (mockProducts as any[])
-      .filter((p) => {
-        const titleMatch    = (p.title || '').toLowerCase().includes(term);
-        const categoryMatch = (p.category || '').toLowerCase().includes(term);
-        const vendorMatch   = (p.vendorName || '').toLowerCase().includes(term);
-        return titleMatch || categoryMatch || vendorMatch;
-      })
-      .slice(0, 5);
+  // ── Debounced Live Search (300ms delay) & 1-character trigger ───────────
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [apiSuggestions, setApiSuggestions] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query]);
+
+  useEffect(() => {
+    const term = debouncedQuery.trim();
+    if (term.length < 1) {
+      setApiSuggestions([]);
+      return;
+    }
+
+    let isMounted = true;
+    getProducts({
+      search: term,
+      category: selectedCategory !== 'All' ? selectedCategory : undefined,
+    })
+      .then((data) => {
+        if (isMounted) {
+          setApiSuggestions(data);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch live search suggestions:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedQuery, selectedCategory]);
+
+  // Compute live suggestions (1-character minimum trigger)
+  const liveSuggestions = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (term.length < 1) return [];
+
+    let list: any[] = [];
+    if (apiSuggestions.length > 0) {
+      list = apiSuggestions;
+    } else {
+      list = (mockProducts as any[]).filter((p) => {
+        const titleMatch = (p.title || p.name || '').toLowerCase().includes(term);
+        const categoryMatch = selectedCategory !== 'All'
+          ? (p.category || '').toLowerCase() === selectedCategory.toLowerCase()
+          : true;
+        return titleMatch && categoryMatch;
+      });
+    }
+
+    return list.slice(0, 5);
+  }, [query, selectedCategory, apiSuggestions]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -139,8 +200,17 @@ export const Header: React.FC<HeaderProps> = ({
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (query.trim()) {
-      navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+    const searchTerm = query.trim();
+    if (searchTerm || (selectedCategory && selectedCategory !== 'All')) {
+      const params = new URLSearchParams();
+      if (searchTerm) {
+        params.set('q', searchTerm);
+        params.set('search', searchTerm);
+      }
+      if (selectedCategory && selectedCategory !== 'All') {
+        params.set('category', selectedCategory);
+      }
+      navigate(`/search?${params.toString()}`);
       setShowSuggestions(false);
       setMobileSearchOpen(false);
     }
@@ -262,7 +332,7 @@ export const Header: React.FC<HeaderProps> = ({
                   />
 
                   {/* ── Live Suggestion Autocomplete Dropdown ── */}
-                  {query.trim().length >= 2 && showSuggestions && (
+                  {query.trim().length >= 1 && showSuggestions && (
                     <>
                       <div className="fixed inset-0 z-40" onClick={() => setShowSuggestions(false)} />
                       <div className="absolute top-full left-0 right-0 mt-2 bg-[#111827]/95 backdrop-blur-md border border-slate-700/80 rounded-2xl shadow-2xl z-50 overflow-hidden divide-y divide-slate-800/50 animate-in fade-in slide-in-from-top-2 duration-150">
@@ -271,34 +341,48 @@ export const Header: React.FC<HeaderProps> = ({
                             No matching products found
                           </div>
                         ) : (
-                          liveSuggestions.map((product) => (
-                            <div
-                              key={product.id}
-                              onClick={() => {
-                                navigate(`/product/${product.id}`);
-                                setQuery('');
-                                setShowSuggestions(false);
-                              }}
-                              className="hover:bg-slate-800/80 cursor-pointer transition-colors p-3 flex items-center gap-3 group"
-                            >
-                              <img
-                                src={product.image}
-                                alt={product.title}
-                                className="w-10 h-10 object-cover rounded-lg bg-slate-800 flex-shrink-0 group-hover:scale-105 transition-transform"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <h4 className="text-white text-sm font-bold truncate group-hover:text-purple-300 transition-colors">
-                                  {product.title}
-                                </h4>
-                                <p className="text-xs text-slate-400 truncate">
-                                  {product.category} • {product.vendorName || 'Vendora'}
-                                </p>
-                              </div>
-                              <span className="text-purple-400 font-semibold text-sm ml-auto whitespace-nowrap">
-                                ${product.price.toFixed(2)}
-                              </span>
-                            </div>
-                          ))
+                          liveSuggestions.map((product) => {
+                            const productId = product.id ?? (product as any).Id;
+                            const productTitle = product.title || (product as any).name || (product as any).Title || 'Product';
+                            const rawImage = product.image || (product as any).imageUrl || (product as any).Image;
+                            const imgSrc = resolveProductImage(rawImage);
+                            const priceVal = typeof product.price === 'number' ? product.price : 0;
+                            const categoryName = typeof product.category === 'string' ? product.category : (product.category?.name || 'General');
+
+                            if (!productId) return null;
+
+                            return (
+                              <Link
+                                key={productId}
+                                to={`/product/${productId}`}
+                                onClick={() => {
+                                  setQuery('');
+                                  setShowSuggestions(false);
+                                }}
+                                className="hover:bg-slate-800/80 cursor-pointer transition-colors p-3 flex items-center gap-3 group block"
+                              >
+                                <img
+                                  src={imgSrc}
+                                  alt={productTitle}
+                                  className="w-10 h-10 object-cover rounded-lg bg-slate-800 flex-shrink-0 group-hover:scale-105 transition-transform"
+                                  onError={(e) => {
+                                    e.currentTarget.src = PLACEHOLDER_IMAGE;
+                                  }}
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-white text-sm font-bold truncate group-hover:text-purple-300 transition-colors">
+                                    {productTitle}
+                                  </h4>
+                                  <p className="text-xs text-slate-400 truncate">
+                                    {categoryName} • {product.vendorName || product.brand || 'Vendora Store'}
+                                  </p>
+                                </div>
+                                <span className="text-purple-400 font-semibold text-sm ml-auto whitespace-nowrap">
+                                  ${priceVal.toFixed(2)}
+                                </span>
+                              </Link>
+                            );
+                          })
                         )}
                       </div>
                     </>

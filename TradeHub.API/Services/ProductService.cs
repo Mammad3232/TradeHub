@@ -36,12 +36,13 @@ public class ProductService : IProductService
         int? subcategoryId = null,
         string? subcategorySlug = null,
         IEnumerable<int>? brandIds = null,
-        double? minRating = null)
+        double? minRating = null,
+        int? categoryId = null)
     {
         var products = await _productRepo.GetAllAsync(
             category, minPrice, maxPrice, search,
             subcategoryId, subcategorySlug,
-            brandIds, minRating);
+            brandIds, minRating, categoryId);
         return products.Select(MapToDto);
     }
 

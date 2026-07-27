@@ -12,7 +12,8 @@ public interface IProductService
         int? subcategoryId = null,
         string? subcategorySlug = null,
         IEnumerable<int>? brandIds = null,
-        double? minRating = null);
+        double? minRating = null,
+        int? categoryId = null);
     Task<ProductResponseDto?> GetByIdAsync(int id);
     Task<ProductResponseDto> CreateAsync(CreateProductDto dto);
     Task<ProductResponseDto> UpdateAsync(int id, UpdateProductDto dto);

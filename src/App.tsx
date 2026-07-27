@@ -286,6 +286,7 @@ function App() {
                 <Route path="/terms"           element={<LegalPage type="terms" />} />
                 <Route path="/category/:categoryName" element={<CategoryPage />} />
                 <Route path="/search"          element={<SearchResultsPage />} />
+                <Route path="/shop"            element={<SearchResultsPage />} />
               </Route>
 
               {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}

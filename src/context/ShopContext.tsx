@@ -154,13 +154,14 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Resolves available stock from any of the possible property names.
   // Returns undefined if truly unknown (no limit enforced in that case).
   const getItemStock = (
-    item: Partial<CartItem> & { stockQuantity?: number; countInStock?: number; unitsInStock?: number }
+    item?: (Partial<CartItem> & { stockQuantity?: number; countInStock?: number; unitsInStock?: number }) | null
   ): number | undefined => {
+    if (!item) return undefined;
     const raw =
       item.stock ??
       item.stockQuantity ??
-      (item as any).countInStock ??
-      (item as any).unitsInStock;
+      (item as any)?.countInStock ??
+      (item as any)?.unitsInStock;
     if (raw === undefined || raw === null) return undefined;
     const n = Number(raw);
     return isNaN(n) ? undefined : n;
@@ -169,17 +170,18 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // -- Cart ------------------------------------------------------------------
 
   const addToCart = useCallback(
-    (item: Omit<CartItem, "quantity"> & { quantity?: number; stock?: number; stockQuantity?: number }) => {
-      if (!item || item.id === undefined) return;
+    (item?: (Omit<CartItem, "quantity"> & { quantity?: number; stock?: number; stockQuantity?: number }) | null) => {
+      if (!item || item.id === undefined || item.id === null) return;
       const addQty = item.quantity ?? 1;
       // Resolve stock from any known alias
       const itemStock = getItemStock(item as any);
       let toastMsg: string | null = null;
 
       setCartItems((prev) => {
-        const existing = prev.find((i) => i?.id === item.id);
+        const safePrev = Array.isArray(prev) ? prev.filter((i): i is CartItem => !!i && i.id !== undefined) : [];
+        const existing = safePrev.find((i) => i.id === item.id);
         // Prefer newly supplied stock; fall back to what's already stored in cart
-        const maxStock = itemStock ?? getItemStock(existing as any);
+        const maxStock = itemStock ?? getItemStock(existing);
         const currentQty = existing ? (existing.quantity ?? 0) : 0;
         const targetQty = currentQty + addQty;
 
@@ -187,17 +189,17 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
           toastMsg = `Maximum available stock reached (Only ${maxStock} item${maxStock > 1 ? 's' : ''} available).`;
           const clampedQty = maxStock; // never exceed stock
           if (existing) {
-            return prev.map((i) =>
+            return safePrev.map((i) =>
               i.id === item.id ? { ...i, stock: maxStock, quantity: clampedQty } : i
             );
           }
           return [
-            ...prev,
+            ...safePrev,
             {
               id: item.id,
               title: item.title || 'Product',
               brand: item.brand || 'Vendora',
-              price: item.price || 0,
+              price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : Number(item.price) || 0,
               image: item.image || '',
               quantity: Math.min(addQty, maxStock),
               stock: maxStock,
@@ -206,7 +208,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         if (existing) {
-          return prev.map((i) =>
+          return safePrev.map((i) =>
             i.id === item.id
               ? {
                   ...i,
@@ -219,12 +221,12 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         return [
-          ...prev,
+          ...safePrev,
           {
             id: item.id,
             title: item.title || 'Product',
             brand: item.brand || 'Vendora',
-            price: item.price || 0,
+            price: typeof item.price === 'number' && !isNaN(item.price) ? item.price : Number(item.price) || 0,
             image: item.image || '',
             quantity: addQty,
             stock: maxStock,
@@ -236,7 +238,7 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
         pushToast(toastMsg, "info");
       }
     },
-    [pushToast, getItemStock]
+    [pushToast]
   );
 
   const removeFromCart = useCallback((id: number) => {
@@ -310,10 +312,11 @@ export const ShopProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const moveToCart = useCallback(
     (item: WishlistItem) => {
+      if (!item || item.id === undefined) return;
       addToCart(item);
-      setWishlistItems((prev) => prev.filter((i) => i.id !== item.id));
-      const titleSnippet = item.title.split(' ').slice(0, 3).join(' ');
-      pushToast(`Moved "${titleSnippet}…" to cart!`, 'cart');
+      const titleStr = item.title || (item as any).name || 'Product';
+      const titleSnippet = titleStr.split(' ').slice(0, 3).join(' ');
+      pushToast(`Added "${titleSnippet}…" to cart!`, 'cart');
     },
     [addToCart, pushToast]
   );

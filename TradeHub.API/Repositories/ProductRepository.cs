@@ -22,7 +22,8 @@ public class ProductRepository : IProductRepository
         int? subcategoryId = null,
         string? subcategorySlug = null,
         IEnumerable<int>? brandIds = null,
-        double? minRating = null)
+        double? minRating = null,
+        int? categoryId = null)
     {
         var query = _db.Products
             .Include(p => p.Category)
@@ -32,7 +33,10 @@ public class ProductRepository : IProductRepository
             .Where(p => p.IsActive)
             .AsQueryable();
 
-        if (!string.IsNullOrWhiteSpace(category))
+        if (categoryId.HasValue)
+            query = query.Where(p => p.CategoryId == categoryId.Value);
+
+        if (!string.IsNullOrWhiteSpace(category) && category.ToLower() != "all")
             query = query.Where(p => p.Category.Name.ToLower() == category.ToLower());
 
         if (subcategoryId.HasValue)
@@ -48,9 +52,10 @@ public class ProductRepository : IProductRepository
             query = query.Where(p => p.Price <= maxPrice.Value);
 
         if (!string.IsNullOrWhiteSpace(search))
-            query = query.Where(p =>
-                p.Name.ToLower().Contains(search.ToLower()) ||
-                p.Description.ToLower().Contains(search.ToLower()));
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(term));
+        }
 
         // Filter by one or more Brand IDs (multi-select)
         var brandIdList = brandIds?.ToList();

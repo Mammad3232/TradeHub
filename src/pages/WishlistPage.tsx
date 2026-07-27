@@ -30,21 +30,77 @@ export const WishlistPage: React.FC = () => {
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
   const [addedIds, setAddedIds]                 = useState<Record<number, boolean>>({});
 
-  const handleAddToCart = (product: WishlistItem) => {
-    addToCart({
-      id: product.id,
-      title: product.title,
-      brand: product.brand,
-      price: product.price,
-      image: product.image,
-    });
+  const handleAddToCart = (product: WishlistItem, e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
 
-    setAddedIds((prev) => ({ ...prev, [product.id]: true }));
-    setTimeout(() => {
-      setAddedIds((prev) => ({ ...prev, [product.id]: false }));
-    }, 1500);
+    try {
+      if (!product || product.id === undefined) return;
+      if (!addToCart) {
+        console.error('addToCart method unavailable');
+        pushToast('Unable to add item to cart', 'cart');
+        return;
+      }
 
-    pushToast(`"${product.title.split(' ').slice(0, 3).join(' ')}…" added to cart!`, 'cart');
+      const titleStr = product.title || (product as any).name || 'Product';
+      const priceVal = typeof product.price === 'number' && !isNaN(product.price) ? product.price : Number(product.price) || 0;
+
+      addToCart({
+        id: product.id,
+        title: titleStr,
+        brand: product.brand || 'Vendora',
+        price: priceVal,
+        image: product.image || '',
+      });
+
+      setAddedIds((prev) => ({ ...prev, [product.id]: true }));
+      setTimeout(() => {
+        setAddedIds((prev) => ({ ...prev, [product.id]: false }));
+      }, 1500);
+
+      const titleSnippet = titleStr.split(' ').slice(0, 3).join(' ');
+      pushToast(`"${titleSnippet}…" added to cart!`, 'cart');
+    } catch (err) {
+      console.error('Error adding item to cart:', err);
+      pushToast('An error occurred while adding item to cart', 'cart');
+    }
+  };
+
+  const handleAddAllToCart = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+
+    try {
+      if (!addToCart) {
+        console.error('addToCart method unavailable');
+        pushToast('Unable to add items to cart', 'cart');
+        return;
+      }
+
+      if (!wishlistItems || wishlistItems.length === 0) return;
+
+      const validItems = wishlistItems.filter((item): item is WishlistItem => !!item && item.id !== undefined);
+      if (validItems.length === 0) return;
+
+      validItems.forEach((item) => {
+        const titleStr = item.title || (item as any).name || 'Product';
+        const priceVal = typeof item.price === 'number' && !isNaN(item.price) ? item.price : Number(item.price) || 0;
+
+        addToCart({
+          id: item.id,
+          title: titleStr,
+          brand: item.brand || 'Vendora',
+          price: priceVal,
+          image: item.image || '',
+        });
+      });
+
+      const count = validItems.length;
+      pushToast(`Added all ${count} item${count > 1 ? 's' : ''} to cart!`, 'cart');
+    } catch (err) {
+      console.error('Error adding all items to cart:', err);
+      pushToast('An error occurred while adding items to cart', 'cart');
+    }
   };
 
   // Extract unique categories from saved wishlist items
@@ -97,7 +153,7 @@ export const WishlistPage: React.FC = () => {
             <div className="flex flex-wrap items-center gap-3 relative z-10">
               <button
                 type="button"
-                onClick={moveAllToCart}
+                onClick={handleAddAllToCart}
                 className="px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-lg shadow-purple-600/25 flex items-center gap-2 cursor-pointer"
               >
                 <ShoppingCart className="w-4 h-4" />
@@ -273,7 +329,7 @@ export const WishlistPage: React.FC = () => {
                         {isInStock ? (
                           <button
                             type="button"
-                            onClick={() => handleAddToCart(product)}
+                            onClick={(e) => handleAddToCart(product, e)}
                             className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
                               addedIds[product.id]
                                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
