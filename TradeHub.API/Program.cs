@@ -44,6 +44,11 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+    // Disable the default claim type mapping so JWT claim names stay as-is.
+    // Without this, the middleware silently renames "role" → ClaimTypes.Role (the long URL form),
+    // which breaks RoleClaimType = "role" and causes 403 on every [Authorize(Roles = "Admin")] endpoint.
+    options.MapInboundClaims = false;
+
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer           = true,
@@ -53,7 +58,9 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer              = builder.Configuration["Jwt:Issuer"],
         ValidAudience            = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew                = TimeSpan.Zero
+        ClockSkew                = TimeSpan.Zero,
+        RoleClaimType            = "role",      // matches new Claim("role", user.Role) in AuthService
+        NameClaimType            = "fullName"   // matches new Claim("fullName", user.FullName)
     };
 
     // SignalR uses WebSockets which cannot attach Authorization headers.

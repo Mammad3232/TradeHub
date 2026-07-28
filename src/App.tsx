@@ -1,47 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Outlet } from 'react-router-dom';
-import { Header }   from './components/Header';
-import { Footer }   from './components/Footer';
-import { Sidebar }  from './components/Sidebar';
+import { Header } from './components/Header';
+import { Footer } from './components/Footer';
+import { Sidebar } from './components/Sidebar';
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
-import { Home }             from './pages/Home';
-import { Login }            from './pages/Login';
-import { Register }         from './pages/Register';
-import { VerifyCode }       from './pages/VerifyCode';
-import { ResetPassword }    from './pages/ResetPassword';
-import { ProductDetail }    from './pages/ProductDetail';
-import { Cart }             from './pages/Cart';
-import { Checkout }         from './pages/Checkout';
-import { MyOrders }         from './pages/MyOrders';
-import { VendorDashboard }  from './pages/VendorDashboard';
-import { VendorProducts }   from './pages/VendorProducts';
-import { AdminDashboard }   from './pages/AdminDashboard';
-import { DealsPage }        from './pages/DealsPage';
-import { VendorsPage }      from './pages/VendorsPage';
-import { NewArrivalsPage }  from './pages/NewArrivalsPage';
+import { Home } from './pages/Home';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
+import { VerifyCode } from './pages/VerifyCode';
+import { ResetPassword } from './pages/ResetPassword';
+import { ProductDetail } from './pages/ProductDetail';
+import { Cart } from './pages/Cart';
+import { Checkout } from './pages/Checkout';
+import { MyOrders } from './pages/MyOrders';
+import { VendorDashboard } from './pages/VendorDashboard';
+import { VendorProducts } from './pages/VendorProducts';
+import { AdminDashboard } from './pages/AdminDashboard';
+import { DealsPage } from './pages/DealsPage';
+import { VendorsPage } from './pages/VendorsPage';
+import { NewArrivalsPage } from './pages/NewArrivalsPage';
 import { BecomeVendorPage } from './pages/BecomeVendorPage';
-import { NotFound }         from './pages/NotFound';
-import { WishlistPage }      from './pages/WishlistPage';
-import { ContactPage }       from './pages/ContactPage';
-import { AboutPage }         from './pages/AboutPage';
-import { LegalPage }         from './pages/LegalPage';
-import { HelpPage }          from './pages/HelpPage';
-import { CareersPage }       from './pages/CareersPage';
-import { BlogPage }          from './pages/BlogPage';
-import { CategoryPage }      from './pages/CategoryPage';
+import { NotFound } from './pages/NotFound';
+import { WishlistPage } from './pages/WishlistPage';
+import { ContactPage } from './pages/ContactPage';
+import { AboutPage } from './pages/AboutPage';
+import { LegalPage } from './pages/LegalPage';
+import { HelpPage } from './pages/HelpPage';
+import { CareersPage } from './pages/CareersPage';
+import { BlogPage } from './pages/BlogPage';
+import { CategoryPage } from './pages/CategoryPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
-import { AdminRoute }        from './components/AdminRoute';
-import { VendorRoute }       from './components/VendorRoute';
-import { ScrollToTop }       from './components/ScrollToTop';
+import { AdminRoute } from './components/AdminRoute';
+import { VendorRoute } from './components/VendorRoute';
+import { ScrollToTop } from './components/ScrollToTop';
+import { PageTracker } from './components/PageTracker';
+
+import { CurrencyProvider } from './context/CurrencyContext';
 
 // ── Shared user type (single source of truth for the whole app) ───────────────
 export interface CurrentUser {
   isLoggedIn: boolean;
-  name:       string;
-  role:       'Admin' | 'Vendor' | 'Customer' | 'Guest';
-  email?:     string;
-  logoUrl?:   string;
+  name: string;
+  role: 'Admin' | 'Vendor' | 'Customer' | 'Guest';
+  email?: string;
+  logoUrl?: string;
   avatarUrl?: string;
 }
 
@@ -56,9 +59,9 @@ export function normalizeUser(raw: Record<string, unknown>): CurrentUser | null 
   // Map DB role strings to app role strings
   const roleMap: Record<string, CurrentUser['role']> = {
     seller: 'Vendor',
-    buyer:  'Customer',
-    admin:  'Admin',
-    Admin:  'Admin',
+    buyer: 'Customer',
+    admin: 'Admin',
+    Admin: 'Admin',
     Vendor: 'Vendor',
     Customer: 'Customer',
   };
@@ -73,11 +76,11 @@ export function normalizeUser(raw: Record<string, unknown>): CurrentUser | null 
 
   return {
     isLoggedIn: true,
-    name:       String(raw.name ?? ''),
-    email:      raw.email ? String(raw.email) : undefined,
+    name: String(raw.name ?? ''),
+    email: raw.email ? String(raw.email) : undefined,
     role,
-    logoUrl:    raw.logoUrl ? String(raw.logoUrl) : undefined,
-    avatarUrl:  raw.avatarUrl ? String(raw.avatarUrl) : undefined,
+    logoUrl: raw.logoUrl ? String(raw.logoUrl) : undefined,
+    avatarUrl: raw.avatarUrl ? String(raw.avatarUrl) : undefined,
   };
 }
 
@@ -151,7 +154,7 @@ const AdminLayout: React.FC<LayoutProps> = ({ currentUser, siteSettings, onSignO
 import { ShopProvider } from './context/ShopContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { AdminOrderToastContainer } from './components/AdminOrderToastContainer';
-import { RoleUpdateToast }         from './components/RoleUpdateToast';
+import { RoleUpdateToast } from './components/RoleUpdateToast';
 import { logoutApi } from './services/authService';
 
 function App() {
@@ -161,22 +164,30 @@ function App() {
    * Reads from localStorage ('vendora_user') on mount; defaults to unauthenticated guest state.
    */
   const [currentUser, setCurrentUser] = useState<CurrentUser>(() => {
-    const savedUser = localStorage.getItem('vendora_user');
-    if (savedUser) {
+    // Try each localStorage key in priority order
+    const raw =
+      localStorage.getItem('vendora_user') ||
+      localStorage.getItem('mockUser') ||
+      localStorage.getItem('vendora_active_user');
+    if (raw) {
       try {
-        const parsed = JSON.parse(savedUser) as CurrentUser;
-        if (parsed && typeof parsed === 'object' && parsed.isLoggedIn) {
+        const parsed = JSON.parse(raw) as Record<string, unknown>;
+        // Always normalize through normalizeUser so role is canonical PascalCase
+        // (e.g. 'admin' -> 'Admin', 'seller' -> 'Vendor')
+        const normalized = normalizeUser(parsed);
+        if (normalized) {
+          // Merge in any saved vendor logo
           const savedVendorSettings = localStorage.getItem('vendora_vendor_settings');
-          if (savedVendorSettings && !parsed.logoUrl) {
+          if (savedVendorSettings && !normalized.logoUrl) {
             try {
               const vs = JSON.parse(savedVendorSettings);
               if (vs?.logoUrl) {
-                parsed.logoUrl = vs.logoUrl;
-                parsed.avatarUrl = vs.logoUrl;
+                normalized.logoUrl = vs.logoUrl;
+                normalized.avatarUrl = vs.logoUrl;
               }
-            } catch {}
+            } catch { }
           }
-          return parsed;
+          return normalized;
         }
       } catch {
         /* ignore invalid JSON */
@@ -213,10 +224,12 @@ function App() {
 
   // ── Login Handler (called by Login.tsx after successful auth)
   const handleAppLogin = (user: CurrentUser) => {
-    setCurrentUser(user);
-    localStorage.setItem('vendora_user', JSON.stringify(user));
-    localStorage.setItem('mockUser', JSON.stringify(user));
-    localStorage.setItem('vendora_active_user', JSON.stringify(user));
+    // Normalize role before storing so it's always canonical PascalCase
+    const normalized = normalizeUser(user as unknown as Record<string, unknown>) ?? user;
+    setCurrentUser(normalized);
+    localStorage.setItem('vendora_user', JSON.stringify(normalized));
+    localStorage.setItem('mockUser', JSON.stringify(normalized));
+    localStorage.setItem('vendora_active_user', JSON.stringify(normalized));
   };
 
   // ── Sign Out Handler
@@ -224,8 +237,8 @@ function App() {
     logoutApi(); // clears tradehub_token + all legacy session keys
     setCurrentUser({
       isLoggedIn: false,
-      name:       '',
-      role:       'Guest',
+      name: '',
+      role: 'Guest',
     });
   };
 
@@ -249,101 +262,104 @@ function App() {
   }, []);
 
   return (
-    <ShopProvider>
-      <Router>
-        <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
-          <>
-            <AdminOrderToastContainer />
-            <RoleUpdateToast />
-            <ScrollToTop />
-            <Routes>
-              {/* ── Public Routes (Navbar + Footer) ────────────────────────── */}
-              <Route element={<PublicLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-                <Route path="/"               element={<Home />} />
-                <Route path="/product/:id"    element={<ProductDetail />} />
-                <Route path="/login"          element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
-                <Route path="/auth"           element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
-                <Route path="/register"       element={<Register />} />
-                <Route path="/verify-code"    element={<VerifyCode />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+    <CurrencyProvider>
+      <ShopProvider>
+        <Router>
+          <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
+            <>
+              <AdminOrderToastContainer />
+              <RoleUpdateToast />
+              <ScrollToTop />
+              <PageTracker />
+              <Routes>
+                {/* ── Public Routes (Navbar + Footer) ────────────────────────── */}
+                <Route element={<PublicLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/login" element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
+                  <Route path="/auth" element={<Login handleLogin={handleAppLogin} onLogin={handleAppLogin} />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/verify-code" element={<VerifyCode />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
 
-                {/* ── Customer Routes ──────────────────────────────────────── */}
-                <Route path="/cart"            element={<Cart />} />
-                <Route path="/wishlist"        element={<WishlistPage />} />
-                <Route path="/checkout"        element={<Checkout />} />
-                <Route path="/my-orders"       element={<MyOrders />} />
-                <Route path="/deals"           element={<DealsPage />} />
-                <Route path="/vendors"         element={<VendorsPage />} />
-                <Route path="/new-arrivals"    element={<NewArrivalsPage />} />
-                <Route path="/vendor-register" element={<BecomeVendorPage />} />
-                <Route path="/contact"         element={<ContactPage />} />
-                <Route path="/about"           element={<AboutPage />} />
-                <Route path="/careers"         element={<CareersPage />} />
-                <Route path="/blog"            element={<BlogPage />} />
-                <Route path="/press"           element={<BlogPage />} />
-                <Route path="/help"            element={<HelpPage />} />
-                <Route path="/privacy"         element={<LegalPage type="privacy" />} />
-                <Route path="/terms"           element={<LegalPage type="terms" />} />
-                <Route path="/category/:categoryName" element={<CategoryPage />} />
-                <Route path="/search"          element={<SearchResultsPage />} />
-                <Route path="/shop"            element={<SearchResultsPage />} />
-              </Route>
+                  {/* ── Customer Routes ──────────────────────────────────────── */}
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/wishlist" element={<WishlistPage />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/my-orders" element={<MyOrders />} />
+                  <Route path="/deals" element={<DealsPage />} />
+                  <Route path="/vendors" element={<VendorsPage />} />
+                  <Route path="/new-arrivals" element={<NewArrivalsPage />} />
+                  <Route path="/vendor-register" element={<BecomeVendorPage />} />
+                  <Route path="/contact" element={<ContactPage />} />
+                  <Route path="/about" element={<AboutPage />} />
+                  <Route path="/careers" element={<CareersPage />} />
+                  <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/press" element={<BlogPage />} />
+                  <Route path="/help" element={<HelpPage />} />
+                  <Route path="/privacy" element={<LegalPage type="privacy" />} />
+                  <Route path="/terms" element={<LegalPage type="terms" />} />
+                  <Route path="/category/:categoryName" element={<CategoryPage />} />
+                  <Route path="/search" element={<SearchResultsPage />} />
+                  <Route path="/shop" element={<SearchResultsPage />} />
+                </Route>
 
-              {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}
-              <Route
-                path="/vendor/dashboard"
-                element={
-                  <VendorRoute currentUser={currentUser}>
-                    <VendorDashboard />
-                  </VendorRoute>
-                }
-              />
-              <Route element={<VendorLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                {/* ── Vendor Routes (protected: Vendor | Admin | Seller only) ─ */}
                 <Route
-                  path="/vendor/products"
+                  path="/vendor/dashboard"
                   element={
                     <VendorRoute currentUser={currentUser}>
-                      <VendorProducts />
+                      <VendorDashboard />
                     </VendorRoute>
                   }
                 />
-              </Route>
+                <Route element={<VendorLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                  <Route
+                    path="/vendor/products"
+                    element={
+                      <VendorRoute currentUser={currentUser}>
+                        <VendorProducts />
+                      </VendorRoute>
+                    }
+                  />
+                </Route>
 
-              {/* ── Admin Routes (protected by AdminRoute guard) ─────────── */}
-              <Route element={<AdminLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminRoute currentUser={currentUser}>
-                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/:tab"
-                  element={
-                    <AdminRoute currentUser={currentUser}>
-                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/*"
-                  element={
-                    <AdminRoute currentUser={currentUser}>
-                      <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
-                    </AdminRoute>
-                  }
-                />
-              </Route>
+                {/* ── Admin Routes (protected by AdminRoute guard) ─────────── */}
+                <Route element={<AdminLayout currentUser={currentUser} siteSettings={siteSettings} onSignOut={handleSignOut} />}>
+                  <Route
+                    path="/admin"
+                    element={
+                      <AdminRoute currentUser={currentUser}>
+                        <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/:tab"
+                    element={
+                      <AdminRoute currentUser={currentUser}>
+                        <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                      </AdminRoute>
+                    }
+                  />
+                  <Route
+                    path="/admin/*"
+                    element={
+                      <AdminRoute currentUser={currentUser}>
+                        <AdminDashboard siteSettings={siteSettings} updateSiteSettings={updateSiteSettings} />
+                      </AdminRoute>
+                    }
+                  />
+                </Route>
 
-              {/* ── 404 Catch-All ──────────────────────────────────────────── */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </>
-        </NotificationProvider>
-      </Router>
-    </ShopProvider>
+                {/* ── 404 Catch-All ──────────────────────────────────────────── */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </>
+          </NotificationProvider>
+        </Router>
+      </ShopProvider>
+    </CurrencyProvider>
   );
 }
 

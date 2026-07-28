@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getImageUrl } from '../services/productService';
 import {
   Package,
   Search,
@@ -221,7 +222,7 @@ export const RecentOrdersTable: React.FC = () => {
                         <div className="w-11 h-11 rounded-xl overflow-hidden bg-slate-800 flex-shrink-0 border border-slate-700/60 flex items-center justify-center relative shadow-inner">
                           {order.productImage ? (
                             <img
-                              src={order.productImage}
+                              src={getImageUrl(order.productImage)}
                               alt={order.productName}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                               loading="lazy"
@@ -361,7 +362,7 @@ export const RecentOrdersTable: React.FC = () => {
               {/* Product Info */}
               <div className="flex items-center gap-4 bg-[#0E1524] p-4 rounded-xl border border-slate-800">
                 <img
-                  src={selectedOrder.productImage}
+                  src={getImageUrl(selectedOrder.productImage)}
                   alt={selectedOrder.productName}
                   className="w-14 h-14 rounded-lg object-cover border border-slate-700"
                 />

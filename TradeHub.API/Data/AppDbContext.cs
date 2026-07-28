@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<Address> Addresses => Set<Address>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,6 +31,27 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Email).IsRequired().HasMaxLength(250);
             entity.Property(u => u.PasswordHash).IsRequired();
             entity.Property(u => u.Role).HasConversion<string>();
+            entity.Property(u => u.PhoneNumber).HasMaxLength(30).IsRequired(false);
+            entity.Property(u => u.Location).HasMaxLength(200).IsRequired(false);
+        });
+
+        // Address Configuration
+        modelBuilder.Entity<Address>(entity =>
+        {
+            entity.HasKey(a => a.Id);
+            entity.Property(a => a.Label).IsRequired().HasMaxLength(100);
+            entity.Property(a => a.FullName).IsRequired().HasMaxLength(150);
+            entity.Property(a => a.Street).IsRequired().HasMaxLength(300);
+            entity.Property(a => a.City).IsRequired().HasMaxLength(100);
+            entity.Property(a => a.State).HasMaxLength(100);
+            entity.Property(a => a.PostalCode).HasMaxLength(20);
+            entity.Property(a => a.Country).IsRequired().HasMaxLength(100);
+            entity.Property(a => a.Phone).HasMaxLength(30).IsRequired(false);
+
+            entity.HasOne(a => a.User)
+                  .WithMany(u => u.Addresses)
+                  .HasForeignKey(a => a.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Brand Configuration

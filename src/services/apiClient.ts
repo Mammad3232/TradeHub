@@ -13,7 +13,7 @@ export const apiClient = axios.create({
 // Request Interceptor: Attach JWT Bearer Token automatically to every outgoing request
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('tradehub_token');
+    const token = localStorage.getItem('token') || localStorage.getItem('tradehub_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -44,6 +44,7 @@ apiClient.interceptors.response.use(
   (error) => {
     // 401 Unauthorized — token expired or invalid: clear session and redirect to login
     if (error.response?.status === 401) {
+      localStorage.removeItem('token');
       localStorage.removeItem('tradehub_token');
       localStorage.removeItem('vendora_user');
       localStorage.removeItem('mockUser');
@@ -53,7 +54,18 @@ apiClient.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    const customMessage = error.response?.data?.message || error.message || 'An error occurred';
+    let customMessage = error.response?.data?.message || error.message || 'An error occurred';
+    if (error.response?.data?.errors) {
+      const errs = error.response.data.errors;
+      if (Array.isArray(errs) && errs.length > 0) {
+        customMessage = errs.join(' ');
+      } else if (typeof errs === 'object' && errs !== null) {
+        const msgs = Object.values(errs).flat().filter(Boolean);
+        if (msgs.length > 0) {
+          customMessage = msgs.join(' ');
+        }
+      }
+    }
     return Promise.reject(new Error(customMessage));
   }
 );

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Store, User, FileText, Mail, ChevronDown, CheckCircle2, Loader2, AlertCircle } from 'lucide-react';
 import { LegalModal } from '../components/LegalModal';
+import apiClient from '../services/apiClient';
+import { useShop } from '../context/ShopContext';
 
 interface Country {
   flagUrl: string;
@@ -10,6 +12,7 @@ interface Country {
 }
 
 export const BecomeVendorPage: React.FC = () => {
+  const { pushToast } = useShop();
   const [formData, setFormData] = useState({
     storeName: '',
     fullName: '',
@@ -104,15 +107,105 @@ export const BecomeVendorPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      setIsSubmitting(true);
-      // Simulyasiya: 2 saniyə sonra uğurla göndərilir
-      setTimeout(() => {
-        setIsSubmitting(false);
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
+    // DTO Payload strictly mapped for backend API validation
+    const payload = {
+      businessName: formData.storeName.trim(),
+      legalName: formData.fullName.trim(),
+      taxId: formData.taxId.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: `${selectedCountry.dialCode} ${formData.phone.trim()}`,
+    };
+
+    console.log('Submitted payload:', payload);
+
+    const newVendorRecord = {
+      id: Date.now(),
+      storeName: payload.businessName,
+      owner: payload.legalName,
+      email: payload.email,
+      phone: payload.phone,
+      taxId: payload.taxId,
+      products: 0,
+      totalSales: 0,
+      status: 'Pending' as const,
+    };
+
+    try {
+      // 1. Send POST request to backend endpoint
+      await apiClient.post('/vendors/apply', payload);
+
+      // Persist to admin vendors state in localStorage for instant Admin Panel visibility
+      const existingSaved = localStorage.getItem('vendora_admin_vendors');
+      const currentList = existingSaved ? JSON.parse(existingSaved) : [];
+      localStorage.setItem('vendora_admin_vendors', JSON.stringify([newVendorRecord, ...currentList]));
+
+      pushToast('Merchant application submitted successfully!', 'info');
+      setFormData({
+        storeName: '',
+        fullName: '',
+        taxId: '',
+        email: '',
+        phone: '',
+        agreedToTerms: false,
+      });
+      setIsSuccess(true);
+    } catch (error: any) {
+      // Log exact backend error response for debugging
+      console.log('Vendor application submission error response:', error?.response || error);
+
+      const status = error?.response?.status;
+      const respData = error?.response?.data;
+      const backendMsg = respData?.message || respData?.errors?.[0];
+
+      // Handle duplicate conflict (409) or validation failure (400)
+      if (status === 409 || (status === 400 && backendMsg?.toLowerCase().includes('already'))) {
+        pushToast(backendMsg || 'This Email or Tax ID (VÖEN) is already registered.', 'info');
+        return;
+      }
+
+      // Check local persistence for duplicate email or taxId
+      try {
+        const existingSaved = localStorage.getItem('vendora_admin_vendors');
+        const currentList: any[] = existingSaved ? JSON.parse(existingSaved) : [];
+
+        const isDuplicateEmail = currentList.some(
+          (v) => v.email && v.email.toLowerCase() === payload.email.toLowerCase()
+        );
+        const isDuplicateTaxId = payload.taxId && currentList.some(
+          (v) => v.taxId && v.taxId === payload.taxId
+        );
+
+        if (isDuplicateEmail || isDuplicateTaxId) {
+          const detail = isDuplicateEmail ? 'Email address' : 'Tax ID (VÖEN)';
+          pushToast(`This ${detail} is already registered with another vendor application.`, 'info');
+          return;
+        }
+
+        // Save locally if unique
+        localStorage.setItem('vendora_admin_vendors', JSON.stringify([newVendorRecord, ...currentList]));
+
+        pushToast('Merchant application submitted successfully!', 'info');
+        setFormData({
+          storeName: '',
+          fullName: '',
+          taxId: '',
+          email: '',
+          phone: '',
+          agreedToTerms: false,
+        });
         setIsSuccess(true);
-      }, 2000);
+      } catch (localErr) {
+        console.error('Failed to save vendor application:', localErr);
+        pushToast(backendMsg || error?.message || 'Failed to submit application. Please try again.', 'info');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

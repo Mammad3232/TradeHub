@@ -9,7 +9,7 @@ namespace TradeHub.API.Controllers;
 
 [ApiController]
 [Route("api/dashboard")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 [Produces("application/json")]
 public class DashboardController : ControllerBase
 {

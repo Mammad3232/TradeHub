@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Star, Sparkles, SlidersHorizontal, Check } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface NewProduct {
   id: number;
@@ -83,6 +84,7 @@ const mockNewArrivals: NewProduct[] = [
 ];
 
 export const NewArrivalsPage: React.FC = () => {
+  const { formatPrice } = useCurrency();
   const [sortBy, setSortBy] = useState<'latest' | 'popular'>('latest');
   const [addedItems, setAddedItems] = useState<number[]>([]);
 
@@ -190,7 +192,7 @@ export const NewArrivalsPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5">
                         <span className="text-lg font-black text-white">
-                          ${product.price.toFixed(2)}
+                          {formatPrice(product.price)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-slate-400 text-xs">

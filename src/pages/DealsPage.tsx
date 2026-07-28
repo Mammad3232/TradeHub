@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, ShoppingCart, Percent, AlertCircle } from 'lucide-react';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface DealProduct {
   id: number;
@@ -76,6 +77,8 @@ const mockDeals: DealProduct[] = [
 ];
 
 export const DealsPage: React.FC = () => {
+  const { formatPrice } = useCurrency();
+  const [activeCategory, setActiveCategory] = useState<string>('All');
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 32, seconds: 15 });
 
   // ── Countdown Timer Effect ───────────────────────────────────
@@ -182,10 +185,10 @@ export const DealsPage: React.FC = () => {
                     {/* Price Row */}
                     <div className="flex items-baseline gap-2 pt-1">
                       <span className="text-xl font-black text-white">
-                        ${product.discountedPrice.toFixed(2)}
+                        {formatPrice(product.discountedPrice)}
                       </span>
                       <span className="text-xs text-slate-500 line-through">
-                        ${product.originalPrice.toFixed(2)}
+                        {formatPrice(product.originalPrice)}
                       </span>
                     </div>
                   </div>

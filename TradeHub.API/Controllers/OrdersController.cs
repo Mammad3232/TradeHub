@@ -30,7 +30,7 @@ public class OrdersController : ControllerBase
 
     private string GetCurrentUserRole()
     {
-        var claim = User.FindFirst(ClaimTypes.Role);
+        var claim = User.FindFirst("role") ?? User.FindFirst(ClaimTypes.Role);
         return claim?.Value ?? "Customer";
     }
 
@@ -106,5 +106,35 @@ public class OrdersController : ControllerBase
 
         var updated = await _orderService.UpdateStatusAsync(id, dto);
         return Ok(ApiResponse<OrderResponseDto>.Ok(updated, "Order status updated successfully."));
+    }
+
+    /// <summary>Get tracking details for an order.</summary>
+    [HttpGet("{id:int}/track")]
+    [ProducesResponseType(typeof(ApiResponse<OrderTrackingDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetTracking(int id)
+    {
+        var userId = GetCurrentUserId();
+        var role = GetCurrentUserRole();
+        var tracking = await _orderService.GetTrackingAsync(id, userId, role);
+        if (tracking is null)
+            return NotFound(ApiResponse.Fail($"Order with ID {id} was not found."));
+
+        return Ok(ApiResponse<OrderTrackingDto>.Ok(tracking));
+    }
+
+    /// <summary>Download invoice for an order.</summary>
+    [HttpGet("{id:int}/invoice")]
+    [ProducesResponseType(typeof(FileResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetInvoice(int id)
+    {
+        var userId = GetCurrentUserId();
+        var role = GetCurrentUserRole();
+        var invoice = await _orderService.GetInvoiceAsync(id, userId, role);
+        if (invoice is null)
+            return NotFound(ApiResponse.Fail($"Order with ID {id} was not found."));
+
+        return File(invoice.Value.Content, invoice.Value.ContentType, invoice.Value.FileName);
     }
 }

@@ -54,3 +54,23 @@ public class UpdateOrderStatusDto
     [Required]
     public string Status { get; set; } = string.Empty;
 }
+
+public class OrderTrackingDto
+{
+    public int OrderId { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string TrackingNumber { get; set; } = string.Empty;
+    public string Carrier { get; set; } = string.Empty;
+    public DateTime EstimatedDelivery { get; set; }
+    public List<OrderTrackingStepDto> Steps { get; set; } = new();
+}
+
+public class OrderTrackingStepDto
+{
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public DateTime? Timestamp { get; set; }
+    public bool IsCompleted { get; set; }
+    public bool IsCurrent { get; set; }
+}
+

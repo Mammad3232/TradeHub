@@ -89,7 +89,7 @@ interface OrderItem {
   date: string;
   amount: number;
   paymentMethod: string;
-  status: 'Pending' | 'Completed' | 'Cancelled';
+  status: string;
 }
 
 interface Brand {
@@ -141,13 +141,7 @@ const initialVendors: VendorItem[] = [
   { id: 5, storeName: 'Nordic Furniture', owner: 'Farid Ibrahimov', email: 'nordic@home.az', products: 15, totalSales: 0.00, status: 'Suspended' },
 ];
 
-const initialOrders: OrderItem[] = [
-  { id: '#ORD-9821', customer: 'Leyla Hasanova', email: 'buyer@vendora.store', date: 'Jul 22, 2026', amount: 349.99, paymentMethod: 'Credit Card', status: 'Completed' },
-  { id: '#ORD-9820', customer: 'Elvin Abbasov', email: 'elvin@gmail.com', date: 'Jul 21, 2026', amount: 89.50, paymentMethod: 'PayPal', status: 'Pending' },
-  { id: '#ORD-9819', customer: 'Aytac Rzayeva', email: 'aytac@domain.com', date: 'Jul 20, 2026', amount: 1250.00, paymentMethod: 'Apple Pay', status: 'Completed' },
-  { id: '#ORD-9818', customer: 'Orkhan Qasimov', email: 'orkhan@tech.az', date: 'Jul 19, 2026', amount: 45.00, paymentMethod: 'Credit Card', status: 'Cancelled' },
-  { id: '#ORD-9817', customer: 'Samira Aliyeva', email: 'samira@box.az', date: 'Jul 18, 2026', amount: 599.00, paymentMethod: 'Credit Card', status: 'Completed' },
-];
+
 
 const initialBrands: Brand[] = [
   { id: 1, name: 'SoundCore', category: 'Electronics', productCount: 48, status: 'Active', initials: 'SC', color: '#6366f1' },
@@ -221,13 +215,123 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     return 'dashboard';
   });
 
+  // State Management — users list
+  const [users, setUsers] = useState<UserItem[]>(initialUsers);
+
+  // State Management — vendors persisted to localStorage
+  const [vendors, setVendors] = useState<VendorItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('vendora_admin_vendors');
+      return saved ? (JSON.parse(saved) as VendorItem[]) : initialVendors;
+    } catch {
+      return initialVendors;
+    }
+  });
+
+  // State Management — orders list from API
+  const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [brands] = useState<Brand[]>(initialBrands);
+  const [products, setProducts] = useState<Product[]>(initialProducts);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [permissions, setPermissions] = useState<PermissionRule[]>(initialPermissions);
+
+  // Add User Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState('');
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserRole, setNewUserRole] = useState<'Admin' | 'Vendor' | 'Customer'>('Customer');
+  const [newUserStatus, setNewUserStatus] = useState<'Active' | 'Suspended'>('Active');
+
+  // Add Vendor Modal State
+  const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
+  const [newVendorStoreName, setNewVendorStoreName] = useState('');
+  const [newVendorOwner, setNewVendorOwner] = useState('');
+  const [newVendorEmail, setNewVendorEmail] = useState('');
+  const [newVendorStatus, setNewVendorStatus] = useState<'Active' | 'Pending' | 'Suspended'>('Pending');
+
+  // Platform Settings State
+  const [settings, setSettings] = useState({
+    siteName: siteSettings?.siteName || 'Vendora',
+    supportEmail: siteSettings?.supportEmail || 'support@vendora.store',
+    commissionRate: siteSettings?.commissionRate ?? 5,
+    maintenanceMode: siteSettings?.maintenanceMode ?? false,
+    requireTwoFactor: siteSettings?.requireTwoFactor ?? true,
+  });
+  type SaveStatus = 'idle' | 'saving' | 'saved';
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [showToast, setShowToast] = useState(false);
+
+  // ── Site Identity — Logo & Favicon Upload State ───────────────────────────
+  const [logoFile, setLogoFile]     = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconFile, setFaviconFile]   = useState<File | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
+  const [logoDragging, setLogoDragging]     = useState(false);
+  const [faviconDragging, setFaviconDragging] = useState(false);
+
+  const logoInputRef    = useRef<HTMLInputElement>(null);
+  const faviconInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper Callbacks
+  const fetchOrders = useCallback(() => {
+    getMyOrders()
+      .then((apiOrders: OrderResponse[]) => {
+        const mapped: OrderItem[] = apiOrders.map((o) => ({
+          id: `#ORD-${o.id}`,
+          rawId: o.id,
+          customer: o.customerName || 'Customer',
+          email: o.customerEmail || '',
+          date: o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
+          amount: o.totalPrice,
+          paymentMethod: 'Credit Card',
+          status: o.status || 'Pending',
+        }));
+        setOrders(mapped);
+      })
+      .catch((err) => {
+        console.error('Failed to load orders in AdminDashboard:', err);
+      });
+  }, []);
+
+  const handleProductCreated = useCallback(() => {
+    getProducts()
+      .then((apiProducts: ApiProduct[]) => {
+        const mapped: Product[] = apiProducts.map((p) => ({
+          id: p.id,
+          name: p.title,
+          price: p.price,
+          stock: p.stockQuantity,
+          lowStockThreshold: p.lowStockThreshold ?? null,
+          vendor: 'TradeHub',
+          category: p.category,
+          image: getImageUrl(p.image),
+          status: p.isActive
+            ? p.stockQuantity === 0
+              ? 'Out of Stock'
+              : 'Active'
+            : 'Draft',
+        }));
+        setProducts(mapped);
+      })
+      .catch(() => { /* keep existing list on error */ });
+  }, []);
+
+  const handleTabChange = (newTab: ActiveTab) => {
+    setActiveTab(newTab);
+    navigate(`/admin/${newTab}`, { replace: true });
+  };
+
+  // Effects
   useEffect(() => {
     if (urlTab && tabs.some((t) => t.id === urlTab.toLowerCase())) {
       setActiveTab(urlTab.toLowerCase() as ActiveTab);
     }
   }, [urlTab]);
 
-  // Fetch real dashboard stats, registered users, products & orders from backend API
+  useEffect(() => {
+    localStorage.setItem('vendora_admin_vendors', JSON.stringify(vendors));
+  }, [vendors]);
+
   useEffect(() => {
     getDashboardStats()
       .then((data) => setDashboardStats(data))
@@ -273,118 +377,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         console.error('Failed to load products in AdminDashboard:', err);
       });
 
-    getMyOrders()
-      .then((apiOrders: OrderResponse[]) => {
-        const mapped: OrderItem[] = apiOrders.map((o) => ({
-          id: `#ORD-${o.id}`,
-          rawId: o.id,
-          customer: o.customerName || 'Customer',
-          email: o.customerEmail || '',
-          date: o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Today',
-          amount: o.totalPrice,
-          paymentMethod: 'Credit Card',
-          status: (o.status === 'Completed' || o.status === 'Cancelled' ? o.status : 'Pending') as 'Pending' | 'Completed' | 'Cancelled',
-        }));
-        setOrders(mapped);
-      })
-      .catch((err) => {
-        console.error('Failed to load orders in AdminDashboard:', err);
-      });
-  }, []);
-
-  const handleTabChange = (newTab: ActiveTab) => {
-    setActiveTab(newTab);
-    navigate(`/admin/${newTab}`, { replace: true });
-  };
-
-  // State Management — users list
-  const [users, setUsers] = useState<UserItem[]>(initialUsers);
-
-  // State Management — vendors persisted to localStorage
-  const [vendors, setVendors] = useState<VendorItem[]>(() => {
-    try {
-      const saved = localStorage.getItem('vendora_admin_vendors');
-      return saved ? (JSON.parse(saved) as VendorItem[]) : initialVendors;
-    } catch {
-      return initialVendors;
-    }
-  });
+    fetchOrders();
+  }, [fetchOrders]);
 
   useEffect(() => {
-    localStorage.setItem('vendora_admin_vendors', JSON.stringify(vendors));
-  }, [vendors]);
-
-  const [orders, setOrders] = useState<OrderItem[]>(initialOrders);
-  const [brands] = useState<Brand[]>(initialBrands);
-
-  // Products — seeded with mock data; updated from API after each successful creation
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-
-  // Add Product Modal
-  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-
-  // Re-fetch the live product list and merge into local state
-  const handleProductCreated = useCallback(() => {
-    getProducts()
-      .then((apiProducts: ApiProduct[]) => {
-        // Map API shape → local Product shape used by the table
-        const mapped: Product[] = apiProducts.map((p) => ({
-          id: p.id,
-          name: p.title,
-          price: p.price,
-          stock: p.stockQuantity,
-          lowStockThreshold: p.lowStockThreshold ?? null,
-          vendor: 'TradeHub',
-          category: p.category,
-          image: getImageUrl(p.image),
-          status: p.isActive
-            ? p.stockQuantity === 0
-              ? 'Out of Stock'
-              : 'Active'
-            : 'Draft',
-        }));
-        setProducts(mapped);
-      })
-      .catch(() => { /* keep existing list on error */ });
-  }, []);
-  const [permissions, setPermissions] = useState<PermissionRule[]>(initialPermissions);
-
-  // Add User Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newUserName, setNewUserName] = useState('');
-  const [newUserEmail, setNewUserEmail] = useState('');
-  const [newUserRole, setNewUserRole] = useState<'Admin' | 'Vendor' | 'Customer'>('Customer');
-  const [newUserStatus, setNewUserStatus] = useState<'Active' | 'Suspended'>('Active');
-
-  // Add Vendor Modal State
-  const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
-  const [newVendorStoreName, setNewVendorStoreName] = useState('');
-  const [newVendorOwner, setNewVendorOwner] = useState('');
-  const [newVendorEmail, setNewVendorEmail] = useState('');
-  const [newVendorStatus, setNewVendorStatus] = useState<'Active' | 'Pending' | 'Suspended'>('Pending');
-
-  // Platform Settings State
-  const [settings, setSettings] = useState({
-    siteName: siteSettings?.siteName || 'Vendora',
-    supportEmail: siteSettings?.supportEmail || 'support@vendora.store',
-    commissionRate: siteSettings?.commissionRate ?? 5,
-    maintenanceMode: siteSettings?.maintenanceMode ?? false,
-    requireTwoFactor: siteSettings?.requireTwoFactor ?? true,
-  });
-  type SaveStatus = 'idle' | 'saving' | 'saved';
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
-  const [showToast, setShowToast] = useState(false);
-
-  // ── Site Identity — Logo & Favicon Upload State ───────────────────────────
-  const [logoFile, setLogoFile]     = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [faviconFile, setFaviconFile]   = useState<File | null>(null);
-  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
-  const [logoDragging, setLogoDragging]     = useState(false);
-  const [faviconDragging, setFaviconDragging] = useState(false);
-
-  const logoInputRef    = useRef<HTMLInputElement>(null);
-  const faviconInputRef = useRef<HTMLInputElement>(null);
+    if (activeTab === 'orders') {
+      fetchOrders();
+    }
+  }, [activeTab, fetchOrders]);
 
   const handleLogoSelect = (file: File | null) => {
     if (!file) return;
@@ -494,7 +494,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     toggleVendorStatus(id, newStatus);
   };
 
-  const handleOrderStatusChange = async (id: string, newStatus: 'Pending' | 'Completed' | 'Cancelled') => {
+  const handleOrderStatusChange = async (id: string, newStatus: string) => {
     const targetOrder = orders.find((o) => o.id === id);
     const numericId = targetOrder?.rawId || parseInt(id.replace('#ORD-', ''), 10);
     try {
@@ -868,36 +868,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {orders.map((o) => (
-                    <tr key={o.id} className="hover:bg-slate-950/20 transition-colors">
-                      <td className={tdClass}>
-                        <span className="font-bold text-indigo-400 font-mono">{o.id}</span>
-                      </td>
-                      <td className={tdClass}>
-                        <span className="font-bold text-white block text-sm">{o.customer}</span>
-                        <span className="text-[11px] text-slate-400">{o.email}</span>
-                      </td>
-                      <td className={tdClass}><span className="text-slate-400 text-xs">{o.date}</span></td>
-                      <td className={tdClass}><span className="font-bold text-white">${o.amount.toFixed(2)}</span></td>
-                      <td className={tdClass}>
-                        <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
-                          <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                          {o.paymentMethod}
-                        </span>
-                      </td>
-                      <td className={tdClass}>
-                        <select
-                          value={o.status}
-                          onChange={(e) => handleOrderStatusChange(o.id, e.target.value as 'Pending' | 'Completed' | 'Cancelled')}
-                          className="bg-[#0E1524] border border-slate-800 text-xs font-bold rounded-xl px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 cursor-pointer"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                        </select>
+                  {orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                        No orders found in the database.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    orders.map((o) => (
+                      <tr key={o.id} className="hover:bg-slate-950/20 transition-colors">
+                        <td className={tdClass}>
+                          <span className="font-bold text-indigo-400 font-mono">{o.id}</span>
+                        </td>
+                        <td className={tdClass}>
+                          <span className="font-bold text-white block text-sm">{o.customer}</span>
+                          <span className="text-[11px] text-slate-400">{o.email}</span>
+                        </td>
+                        <td className={tdClass}><span className="text-slate-400 text-xs">{o.date}</span></td>
+                        <td className={tdClass}><span className="font-bold text-white">${o.amount.toFixed(2)}</span></td>
+                        <td className={tdClass}>
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+                            <CreditCard className="w-3.5 h-3.5 text-slate-400" />
+                            {o.paymentMethod}
+                          </span>
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            value={o.status}
+                            onChange={(e) => handleOrderStatusChange(o.id, e.target.value)}
+                            className="bg-[#0E1524] border border-slate-800 text-xs font-bold rounded-xl px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500/50 cursor-pointer"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Confirmed">Confirmed</option>
+                            <option value="Shipped">Shipped</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

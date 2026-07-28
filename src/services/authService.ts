@@ -27,6 +27,7 @@ export interface RegisterParams {
 export const loginApi = async (credentials: LoginParams): Promise<AuthResponse> => {
   const response = await apiClient.post<never, AuthResponse>('/auth/login', credentials);
   if (response.token) {
+    localStorage.setItem('token', response.token);
     localStorage.setItem('tradehub_token', response.token);
   }
   return response;
@@ -35,12 +36,14 @@ export const loginApi = async (credentials: LoginParams): Promise<AuthResponse> 
 export const registerApi = async (data: RegisterParams): Promise<AuthResponse> => {
   const response = await apiClient.post<never, AuthResponse>('/auth/register', data);
   if (response.token) {
+    localStorage.setItem('token', response.token);
     localStorage.setItem('tradehub_token', response.token);
   }
   return response;
 };
 
 export const logoutApi = (): void => {
+  localStorage.removeItem('token');
   localStorage.removeItem('tradehub_token');       // JWT — must be cleared first
   localStorage.removeItem('vendora_user');
   localStorage.removeItem('mockUser');

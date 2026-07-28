@@ -16,7 +16,12 @@ public class User
     public UserRole Role { get; set; } = UserRole.Customer;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    // Optional profile fields
+    public string? PhoneNumber { get; set; }
+    public string? Location { get; set; }
+
     // Navigation properties
     public ICollection<Order> Orders { get; set; } = new List<Order>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<Address> Addresses { get; set; } = new List<Address>();
 }

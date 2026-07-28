@@ -27,6 +27,7 @@ public class Notification
     /// the threshold. Prevents the same alert from re-firing until stock drops again.
     /// Always false for NewOrder notifications.
     /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool IsResolved { get; set; } = false;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

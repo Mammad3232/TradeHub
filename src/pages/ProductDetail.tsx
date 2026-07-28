@@ -19,6 +19,7 @@ import {
   PackageX,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { getProductById } from '../services/productService';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -91,6 +92,7 @@ export const ProductDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, wishlistItems, pushToast } = useShop();
+  const { formatPrice } = useCurrency();
 
   // ── All hooks unconditionally at top ────────────────────────────────────────
   const [product, setProduct]             = useState<any>(null);
@@ -385,10 +387,10 @@ export const ProductDetail: React.FC = () => {
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Purchase Value</span>
                 <div className="flex items-center gap-4">
                   <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-                    ${Number(product.price).toFixed(2)}
+                    {formatPrice(Number(product.price))}
                   </span>
                   <span className="text-sm font-semibold text-slate-500 line-through mt-1">
-                    ${originalPrice.toFixed(2)}
+                    {formatPrice(originalPrice)}
                   </span>
                   <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1">
                     <Sparkles className="w-3.5 h-3.5" /> Save 20%

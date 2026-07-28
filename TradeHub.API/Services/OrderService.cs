@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using TradeHub.API.Data;
@@ -189,6 +190,136 @@ public class OrderService : IOrderService
             ?? throw new Exception("Failed to retrieve updated order.");
 
         return MapToDto(order);
+    }
+
+    public async Task<OrderTrackingDto?> GetTrackingAsync(int id, int userId, string userRole)
+    {
+        var order = await _orderRepo.GetByIdAsync(id);
+        if (order is null) return null;
+
+        if (!userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) && order.UserId != userId)
+            throw new UnauthorizedAccessException("You do not have permission to view tracking for this order.");
+
+        var statusStr = order.Status.ToString();
+        var steps = new List<OrderTrackingStepDto>();
+
+        bool isCancelled = order.Status == OrderStatus.Cancelled;
+        bool isDelivered = order.Status == OrderStatus.Delivered;
+        bool isShipped = order.Status == OrderStatus.Shipped || isDelivered;
+        bool isConfirmed = order.Status == OrderStatus.Confirmed || isShipped || isDelivered;
+
+        steps.Add(new OrderTrackingStepDto
+        {
+            Title = "Order Placed",
+            Description = "Your order was successfully submitted and received.",
+            Timestamp = order.OrderDate,
+            IsCompleted = true,
+            IsCurrent = order.Status == OrderStatus.Pending
+        });
+
+        if (isCancelled)
+        {
+            steps.Add(new OrderTrackingStepDto
+            {
+                Title = "Order Cancelled",
+                Description = "This order has been cancelled.",
+                Timestamp = order.OrderDate.AddHours(1),
+                IsCompleted = true,
+                IsCurrent = true
+            });
+        }
+        else
+        {
+            steps.Add(new OrderTrackingStepDto
+            {
+                Title = "Order Confirmed",
+                Description = "Payment verified and order confirmed by seller.",
+                Timestamp = isConfirmed ? order.OrderDate.AddHours(2) : null,
+                IsCompleted = isConfirmed,
+                IsCurrent = order.Status == OrderStatus.Confirmed
+            });
+
+            steps.Add(new OrderTrackingStepDto
+            {
+                Title = "Package Shipped",
+                Description = "Carrier picked up package and dispatched from warehouse.",
+                Timestamp = isShipped ? order.OrderDate.AddDays(1) : null,
+                IsCompleted = isShipped,
+                IsCurrent = order.Status == OrderStatus.Shipped
+            });
+
+            steps.Add(new OrderTrackingStepDto
+            {
+                Title = "Out for Delivery",
+                Description = "Courier is on the way to your delivery address.",
+                Timestamp = isDelivered ? order.OrderDate.AddDays(2).AddHours(4) : null,
+                IsCompleted = isDelivered,
+                IsCurrent = false
+            });
+
+            steps.Add(new OrderTrackingStepDto
+            {
+                Title = "Delivered",
+                Description = "Package handed over to recipient.",
+                Timestamp = isDelivered ? order.OrderDate.AddDays(3) : null,
+                IsCompleted = isDelivered,
+                IsCurrent = isDelivered
+            });
+        }
+
+        return new OrderTrackingDto
+        {
+            OrderId = order.Id,
+            Status = statusStr,
+            Carrier = "TradeHub Logistics",
+            TrackingNumber = $"TRK-{order.Id:D6}-{order.OrderDate:yyyyMMdd}",
+            EstimatedDelivery = order.OrderDate.AddDays(3),
+            Steps = steps
+        };
+    }
+
+    public async Task<(byte[] Content, string ContentType, string FileName)?> GetInvoiceAsync(int id, int userId, string userRole)
+    {
+        var order = await _orderRepo.GetByIdAsync(id);
+        if (order is null) return null;
+
+        if (!userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) && order.UserId != userId)
+            throw new UnauthorizedAccessException("You do not have permission to download this invoice.");
+
+        var sb = new StringBuilder();
+        sb.AppendLine("=========================================================================");
+        sb.AppendLine("                           TRADEHUB INVOICE                             ");
+        sb.AppendLine("=========================================================================");
+        sb.AppendLine($"Invoice Number : INV-{order.Id:D6}");
+        sb.AppendLine($"Order Date     : {order.OrderDate:yyyy-MM-dd HH:mm:ss} UTC");
+        sb.AppendLine($"Order Status   : {order.Status}");
+        sb.AppendLine("-------------------------------------------------------------------------");
+        sb.AppendLine("CUSTOMER INFORMATION:");
+        sb.AppendLine($"Customer Name  : {order.User?.FullName ?? "Valued Customer"}");
+        sb.AppendLine($"Customer Email : {order.User?.Email ?? "N/A"}");
+        sb.AppendLine("-------------------------------------------------------------------------");
+        sb.AppendLine("ORDER ITEMS:");
+        sb.AppendLine(string.Format("{0,-6} | {1,-35} | {2,-10} | {3,-10}", "Qty", "Product Name", "Unit Price", "Subtotal"));
+        sb.AppendLine(new string('-', 73));
+
+        foreach (var item in order.OrderItems)
+        {
+            var pName = item.Product?.Name ?? "Product Item";
+            if (pName.Length > 35) pName = pName.Substring(0, 32) + "...";
+            var lineTotal = item.Quantity * item.UnitPrice;
+            sb.AppendLine(string.Format("{0,-6} | {1,-35} | ${2,-9:F2} | ${3,-9:F2}", item.Quantity, pName, item.UnitPrice, lineTotal));
+        }
+
+        sb.AppendLine(new string('-', 73));
+        sb.AppendLine($"Subtotal:                                                         ${order.TotalPrice:F2}");
+        sb.AppendLine("Shipping:                                                         FREE");
+        sb.AppendLine($"GRAND TOTAL PAID:                                                 ${order.TotalPrice:F2}");
+        sb.AppendLine("=========================================================================");
+        sb.AppendLine("               Thank you for your business with TradeHub!                ");
+        sb.AppendLine("=========================================================================");
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        return (bytes, "text/plain; charset=utf-8", $"Invoice_Order_{order.Id}.txt");
     }
 
     // ── Mapping ────────────────────────────────────────────────────────────────

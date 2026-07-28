@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Star, Store, ShoppingCart, Heart, Eye } from 'lucide-react';
 import type { Product } from '../services/api';
 import { useShop } from '../context/ShopContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 // ── Image URL resolver ────────────────────────────────────────────────────────
 // If the backend returns a relative path (e.g. /uploads/products/xyz.jpg),
@@ -53,6 +54,7 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, pushToast, toggleWishlist, isWishlisted } = useShop();
+  const { formatPrice, t } = useCurrency();
   const isWish = isWishlisted ? isWishlisted(product.id) : false;
   const [wishlisted, setWishlisted] = useState(isWish);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -164,7 +166,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* Price row */}
         <div className="flex items-end justify-between mt-auto pt-2 border-t border-slate-800/80">
           <div>
-            <span className="text-xl font-extrabold text-white">${product.price.toFixed(2)}</span>
+            <span className="text-xl font-extrabold text-white">{formatPrice(product.price)}</span>
             {/* Optional original price crossed out — placeholder */}
             {/* <span className="text-xs text-slate-500 line-through ml-1.5">$59.99</span> */}
           </div>

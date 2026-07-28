@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, ShoppingBag, X, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Bell, ShoppingBag, X, ArrowRight, AlertTriangle, Eye, User } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,11 +7,14 @@ export const AdminOrderToastContainer: React.FC = () => {
   const { liveToasts, dismissToast } = useNotifications();
   const navigate = useNavigate();
 
-  if (liveToasts.length === 0) return null;
+  if (!liveToasts || liveToasts.length === 0) return null;
 
   return (
     <div className="fixed top-20 right-4 z-[300] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
       {liveToasts.map((toast) => {
+        if (!toast) return null;
+
+        // ── 1. Low Stock Toast ───────────────────────────────────────────────
         if (toast.type === 'LowStock') {
           return (
             <div
@@ -29,17 +32,17 @@ export const AdminOrderToastContainer: React.FC = () => {
                   </span>
                   <button
                     onClick={() => dismissToast(toast.id)}
-                    className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors"
+                    className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
                 <p className="text-sm font-semibold text-white mt-1 truncate">
-                  {toast.productName}
+                  {toast.productName || 'Product'}
                 </p>
                 <p className="text-xs text-rose-300 mt-0.5 font-medium">
-                  Stock: <span className="font-extrabold text-white">{toast.stockQuantity}</span> left (Threshold: {toast.threshold})
+                  Stock: <span className="font-extrabold text-white">{toast.stockQuantity ?? 0}</span> left (Threshold: {toast.threshold ?? 0})
                 </p>
 
                 <button
@@ -47,7 +50,7 @@ export const AdminOrderToastContainer: React.FC = () => {
                     dismissToast(toast.id);
                     navigate('/admin/products');
                   }}
-                  className="mt-2 text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-all group"
+                  className="mt-2 text-xs font-semibold text-rose-400 hover:text-rose-300 flex items-center gap-1 transition-all group cursor-pointer"
                 >
                   Manage Products{' '}
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
@@ -56,6 +59,48 @@ export const AdminOrderToastContainer: React.FC = () => {
             </div>
           );
         }
+
+        // ── 2. User Activity Toast ────────────────────────────────────────────
+        if (toast.type === 'UserActivity') {
+          const activityToast = toast as any;
+          return (
+            <div
+              key={toast.id}
+              className="pointer-events-auto bg-slate-900 border-2 border-sky-500/80 rounded-2xl shadow-2xl p-4 text-slate-100 flex items-start gap-3.5 animate-in slide-in-from-top-5 duration-300 backdrop-blur-md"
+            >
+              <div className="p-2.5 bg-gradient-to-br from-sky-500 to-sky-600 rounded-xl text-white flex-shrink-0 shadow-lg shadow-sky-500/20">
+                <Eye className="w-5 h-5" />
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1">
+                    <User className="w-3 h-3" /> Live User Activity
+                  </span>
+                  <button
+                    onClick={() => dismissToast(toast.id)}
+                    className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="text-sm font-semibold text-white mt-1 truncate">
+                  {activityToast.userName || 'User'}
+                </p>
+                <p className="text-xs text-sky-300 mt-0.5 leading-relaxed font-medium">
+                  {activityToast.message || `Viewed page: ${activityToast.pageUrl || 'Storefront'}`}
+                </p>
+              </div>
+            </div>
+          );
+        }
+
+        // ── 3. New Order Toast (Default / Fallback) ───────────────────────────
+        const orderToast = toast as any;
+        const formattedPrice = typeof orderToast.totalPrice === 'number' 
+          ? orderToast.totalPrice.toFixed(2) 
+          : '0.00';
 
         return (
           <div
@@ -73,28 +118,32 @@ export const AdminOrderToastContainer: React.FC = () => {
                 </span>
                 <button
                   onClick={() => dismissToast(toast.id)}
-                  className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors"
+                  className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
               <p className="text-sm font-semibold text-white mt-1">
-                Order #{toast.orderId} Placed
+                {orderToast.orderId ? `Order #${orderToast.orderId} Placed` : (orderToast.message || 'New Alert Received')}
               </p>
-              <p className="text-xs text-slate-300 mt-0.5">
-                Customer: <span className="font-medium text-slate-100">{toast.customerName}</span>
-              </p>
-              <p className="text-sm font-extrabold text-emerald-400 mt-1">
-                ${toast.totalPrice.toFixed(2)}
-              </p>
+              {orderToast.customerName && (
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Customer: <span className="font-medium text-slate-100">{orderToast.customerName}</span>
+                </p>
+              )}
+              {typeof orderToast.totalPrice === 'number' && (
+                <p className="text-sm font-extrabold text-emerald-400 mt-1">
+                  ${formattedPrice}
+                </p>
+              )}
 
               <button
                 onClick={() => {
                   dismissToast(toast.id);
                   navigate('/admin/orders');
                 }}
-                className="mt-2 text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-all group"
+                className="mt-2 text-xs font-semibold text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-all group cursor-pointer"
               >
                 View in Admin Panel{' '}
                 <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />

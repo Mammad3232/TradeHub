@@ -19,11 +19,13 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { useCurrency } from '../context/CurrencyContext';
 import { createOrder } from '../services/orderService';
 
 export const Cart: React.FC = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQty, clearCart, cartTotal, pushToast } = useShop();
+  const { formatPrice, t } = useCurrency();
 
   // ── Shipping Form State ──────────────────────────────────────────────────
   const [fullName, setFullName] = useState('');
@@ -231,7 +233,7 @@ export const Cart: React.FC = () => {
                           {item?.title || 'Product'}
                         </h3>
                         <p className="text-sm font-black text-purple-400 mt-1">
-                          ${(item?.price ?? 0).toFixed(2)}
+                          {formatPrice(item?.price ?? 0)}
                         </p>
                       </div>
                     </div>
@@ -284,7 +286,7 @@ export const Cart: React.FC = () => {
                       {/* Item Total */}
                       <div className="text-right min-w-[70px]">
                         <span className="text-sm font-black text-white">
-                          ${((item?.price ?? 0) * (item?.quantity ?? 1)).toFixed(2)}
+                          {formatPrice((item?.price ?? 0) * (item?.quantity ?? 1))}
                         </span>
                       </div>
 
@@ -476,17 +478,17 @@ export const Cart: React.FC = () => {
                   <div className="bg-[#131B2C]/50 rounded-2xl p-5 mt-6 border border-slate-800/50">
                     <div className="flex justify-between text-sm text-slate-400 mb-3">
                       <span>Subtotal</span>
-                      <span className="font-semibold text-white">${cartTotal.toFixed(2)}</span>
+                      <span className="font-semibold text-white">{formatPrice(cartTotal)}</span>
                     </div>
 
                     <div className="flex justify-between text-sm text-slate-400 mb-3">
                       <span>Shipping Fee</span>
-                      <span className="font-semibold text-white">${shippingFee.toFixed(2)}</span>
+                      <span className="font-semibold text-white">{formatPrice(shippingFee)}</span>
                     </div>
 
                     <div className="flex justify-between items-center text-xl font-bold text-white mt-4 pt-4 border-t border-slate-800">
                       <span>Total</span>
-                      <span className="text-xl font-bold text-indigo-400">${finalTotal.toFixed(2)}</span>
+                      <span className="text-xl font-bold text-indigo-400">{formatPrice(finalTotal)}</span>
                     </div>
                   </div>
 
@@ -504,7 +506,7 @@ export const Cart: React.FC = () => {
                     ) : (
                       <>
                         <Lock className="w-4 h-4" />
-                        <span>Pay Now - ${finalTotal.toFixed(2)}</span>
+                        <span>Pay Now - {formatPrice(finalTotal)}</span>
                       </>
                     )}
                   </button>

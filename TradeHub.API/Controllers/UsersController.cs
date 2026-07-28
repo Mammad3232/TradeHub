@@ -8,7 +8,7 @@ namespace TradeHub.API.Controllers;
 
 [ApiController]
 [Route("api/users")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 [Produces("application/json")]
 public class UsersController : ControllerBase
 {

@@ -15,7 +15,7 @@ namespace TradeHub.API.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/notifications")]
-[Authorize(Roles = "Admin")]
+[Authorize]
 public class NotificationsController : ControllerBase
 {
     private readonly AppDbContext _db;

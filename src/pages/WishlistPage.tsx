@@ -14,8 +14,10 @@ import {
   Check,
 } from 'lucide-react';
 import { useShop, type WishlistItem } from '../context/ShopContext';
+import { useCurrency } from '../context/CurrencyContext';
 
 export const WishlistPage: React.FC = () => {
+  const { formatPrice } = useCurrency();
   const {
     wishlistItems,
     addToCart,
@@ -323,7 +325,7 @@ export const WishlistPage: React.FC = () => {
                       {/* Price & Add to Cart Action */}
                       <div className="mt-auto pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
                         <div>
-                          <span className="text-lg font-black text-white">${product.price.toFixed(2)}</span>
+                          <span className="text-lg font-black text-white">{formatPrice(product.price)}</span>
                         </div>
 
                         {isInStock ? (
