@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Layers } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { TrackOrderModal } from './TrackOrderModal';
 
 interface SubNavbarProps {
@@ -9,6 +10,7 @@ interface SubNavbarProps {
 
 export const SubNavbar: React.FC<SubNavbarProps> = ({ onMenuClick }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { t } = useTranslation();
 
   return (
     <>
@@ -28,26 +30,26 @@ export const SubNavbar: React.FC<SubNavbarProps> = ({ onMenuClick }) => {
         {/* Center Links */}
         <div className="flex items-center gap-6 font-medium flex-shrink-0">
           <Link to="/deals" className="hover:text-amber-400 transition-colors flex items-center h-7">
-            Today's Deals
+            {t('nav.deals')}
           </Link>
           <Link to="/vendors" className="hover:text-amber-400 transition-colors flex items-center h-7">
-            Top Vendors
+            {t('nav.vendors')}
           </Link>
           <Link to="/new-arrivals" className="hover:text-amber-400 transition-colors flex items-center h-7">
-            New Arrivals
+            {t('nav.newArrivals')}
           </Link>
           <button
             type="button"
             onClick={() => setIsModalOpen(true)}
             className="hover:text-amber-400 transition-colors flex items-center h-7 cursor-pointer"
           >
-            Track Order
+            {t('orders.trackOrder')}
           </button>
           <Link
             to="/vendor-register"
             className="text-amber-400 font-bold hover:text-amber-300 transition-colors flex items-center h-7"
           >
-            Become a Vendor
+            {t('nav.becomeVendor')}
           </Link>
         </div>
 
@@ -58,7 +60,7 @@ export const SubNavbar: React.FC<SubNavbarProps> = ({ onMenuClick }) => {
             className="text-slate-300 hover:text-white font-semibold flex items-center gap-1 border border-transparent hover:border-white rounded-sm px-2 py-0.5 transition-all h-7"
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Admin Control Panel</span>
+            <span>{t('nav.adminPanel')}</span>
           </Link>
         </div>
       </div>

@@ -170,7 +170,7 @@ export const Cart: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-2xl font-black text-white">Your Cart is Currently Empty</h2>
+              <h2 className="text-2xl font-black text-white">{t('cart.emptyMessage')}</h2>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
                 Before proceeding to checkout, please add items to your shopping cart.
               </p>
@@ -182,7 +182,7 @@ export const Cart: React.FC = () => {
                 className="inline-flex items-center gap-2 px-8 py-3.5 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-sm transition-all shadow-xl shadow-purple-600/30"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Return to Shop</span>
+                <span>{t('cart.browseProducts')}</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </div>

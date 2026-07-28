@@ -5,6 +5,8 @@ import {
   DollarSign, SlidersHorizontal, Award, Search, ArrowUpDown,
 } from "lucide-react";
 import { useShop } from "../context/ShopContext";
+import { useCurrency } from "../context/CurrencyContext";
+import { useTranslation } from "react-i18next";
 import { getProducts } from "../services/api";
 import { getBrands, type Brand } from "../services/productService";
 import {
@@ -107,6 +109,8 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   const { addToCart, toggleWishlist, isWishlisted, pushToast, setMiniCartOpen } =
     useShop();
+  const { formatPrice, symbol } = useCurrency();
+  const { t } = useTranslation();
 
   const [allProducts, setAllProducts] = useState<ProductCardItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -536,12 +540,12 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               )}
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {activeCatObj ? activeCatObj.name : "Marketplace Catalog"}
+              {activeCatObj ? activeCatObj.name : t('catalog.title')}
             </h2>
             <p className="text-sm text-slate-400">
-              Showing{" "}
+              {t('catalog.showing')}{" "}
               <span className="text-white font-bold">{processedProducts.length}</span>{" "}
-              products matching your filters.
+              {t('catalog.productsMatching')}.
             </p>
           </div>
 
@@ -604,10 +608,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 >
                   <DollarSign className="w-3 h-3" />
                   {minPrice && maxPrice
-                    ? `$${minPrice}–$${maxPrice}`
+                    ? `${formatPrice(Number(minPrice))}–${formatPrice(Number(maxPrice))}`
                     : minPrice
-                    ? `≥$${minPrice}`
-                    : `≤$${maxPrice}`}
+                    ? `≥${formatPrice(Number(minPrice))}`
+                    : `≤${formatPrice(Number(maxPrice))}`}
                   <X className="w-3 h-3 ml-1" />
                 </button>
               )}
@@ -655,7 +659,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
             {/* ── 1. DEPARTMENTS ─────────────────────────────── */}
             <SidebarSection
-              title={activeCatObj ? `${activeCatObj.name} Departments` : "Departments"}
+              title={activeCatObj ? `${activeCatObj.name} ${t('catalog.departments')}` : t('catalog.departments')}
               icon={<FolderTree className={`w-4 h-4 ${activeCatObj ? currentTheme.text : "text-purple-400"}`} />}
               showClear={!!activeSubObj}
               onClear={(e) => { e.preventDefault(); onSelectSubcategory?.(null); }}
@@ -759,7 +763,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
             {/* ── 2. PRICE RANGE ─────────────────────────────── */}
             <SidebarSection
-              title="Price Range"
+              title={t('catalog.priceRange')}
               icon={<DollarSign className="w-4 h-4 text-emerald-400" />}
               showClear={!!(minPrice || maxPrice)}
               onClear={(e) => handleClearPrice(e)}
@@ -768,7 +772,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 {/* Min/Max inputs */}
                 <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{symbol}</span>
                     <input
                       type="number"
                       placeholder={String(priceRange.min)}
@@ -782,12 +786,12 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                         }
                       }}
                       min={0}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-5 pr-2 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-6 pr-2 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                     />
                   </div>
-                  <span className="text-slate-600 text-xs font-bold flex-shrink-0">to</span>
+                  <span className="text-slate-600 text-xs font-bold flex-shrink-0">{t('catalog.to')}</span>
                   <div className="relative flex-1">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">$</span>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-xs">{symbol}</span>
                     <input
                       type="number"
                       placeholder={String(priceRange.max)}
@@ -801,7 +805,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                         }
                       }}
                       min={0}
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-5 pr-2 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-6 pr-2 py-2 text-xs text-white placeholder:text-slate-600 focus:outline-none focus:border-purple-500 transition-colors"
                     />
                   </div>
                 </div>
@@ -809,10 +813,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 {/* Quick-select price buckets */}
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
-                    { label: "Under $50",   min: "",    max: "50"   },
-                    { label: "$50–$200",    min: "50",  max: "200"  },
-                    { label: "$200–$500",   min: "200", max: "500"  },
-                    { label: "Over $500",   min: "500", max: ""     },
+                    { label: `${t('catalog.under')} ${formatPrice(50)}`, min: "", max: "50" },
+                    { label: `${formatPrice(50)}–${formatPrice(200)}`, min: "50", max: "200" },
+                    { label: `${formatPrice(200)}–${formatPrice(500)}`, min: "200", max: "500" },
+                    { label: `${t('catalog.over')} ${formatPrice(500)}`, min: "500", max: "" },
                   ].map((bucket) => {
                     const isActive = minPrice === bucket.min && maxPrice === bucket.max;
                     return (
@@ -848,9 +852,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
                 {/* Dynamic range display */}
                 <div className="flex items-center justify-between text-[10px] text-slate-500 font-medium pt-1 border-t border-slate-800">
-                  <span>Available: ${priceRange.min}</span>
+                  <span>{t('catalog.available')}: {formatPrice(priceRange.min)}</span>
                   <span className="text-slate-600">–</span>
-                  <span>${priceRange.max}</span>
+                  <span>{formatPrice(priceRange.max)}</span>
                 </div>
               </div>
             </SidebarSection>
@@ -858,7 +862,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
             {/* ── 3. BRANDS (checkbox multi-select) ──────────── */}
             {availableBrands.length > 0 && (
               <SidebarSection
-                title="Brands"
+                title={t('catalog.brands')}
                 icon={<Tag className="w-4 h-4 text-amber-400" />}
                 showClear={selectedBrands.size > 0}
                 onClear={(e) => { e.preventDefault(); setSelectedBrands(new Set()); }}
@@ -906,7 +910,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
             {/* ── 4. RATING FILTER ───────────────────────────── */}
             <SidebarSection
-              title="Minimum Rating"
+              title={t('catalog.minRating')}
               icon={<Award className="w-4 h-4 text-yellow-400" />}
               showClear={minRating !== null}
               onClear={(e) => {
@@ -974,7 +978,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-bold hover:bg-rose-500/20 hover:border-rose-500/50 transition-all cursor-pointer"
               >
                 <RotateCcw className="w-3.5 h-3.5" />
-                Reset All Filters
+                {t('catalog.resetFilters')}
               </button>
             )}
 
@@ -992,7 +996,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder={t('search.placeholder')}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
@@ -1012,16 +1016,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               {/* Sort selector */}
               <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
                 <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
-                <span className="text-xs text-slate-400 font-semibold flex-shrink-0">Sort:</span>
+                <span className="text-xs text-slate-400 font-semibold flex-shrink-0">{t('catalog.sort')}:</span>
                 <select
                   value={sortOption}
                   onChange={(e) => setSortOption(e.target.value)}
                   className="bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-500 transition-colors cursor-pointer"
                 >
-                  <option value="default">Featured</option>
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="rating-desc">Highest Rated</option>
+                  <option value="default">{t('catalog.featured')}</option>
+                  <option value="price-asc">{t('catalog.priceLowHigh')}</option>
+                  <option value="price-desc">{t('catalog.priceHighLow')}</option>
+                  <option value="rating-desc">{t('catalog.highestRated')}</option>
                 </select>
               </div>
             </div>
@@ -1135,7 +1139,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                           </div>
                           <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-800/80">
                             <span className="text-lg font-bold text-white">
-                              ${product.price.toFixed(2)}
+                              {formatPrice(product.price)}
                             </span>
                             <button
                               type="button"

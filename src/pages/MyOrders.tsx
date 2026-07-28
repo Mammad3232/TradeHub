@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import RawPhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 
@@ -18,7 +19,7 @@ import {
   getUserPreferences, updateUserPreferences, deleteMyAccount,
   type ProfileData, type AddressData, type UpsertAddressPayload, type UserPreferencesPayload,
 } from '../services/accountService';
-import { useCurrency, type SupportedCurrency, type SupportedLanguage } from '../context/CurrencyContext';
+import { usePreferences, normalizeCurrency, normalizeLanguage, type SupportedCurrency, type SupportedLanguage } from '../context/PreferencesContext';
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
@@ -340,7 +341,8 @@ export const MyOrders: React.FC = () => {
   const [changingPass, setChangingPass] = useState(false);
   const [securityMessage, setSecurityMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
-  const { currency: globalCurrency, setCurrency, language: globalLanguage, setLanguage, formatPrice } = useCurrency();
+  const { currency: globalCurrency, language: globalLanguage, changeCurrency, changeLanguage, formatPrice } = usePreferences();
+  const { t } = useTranslation();
 
   const [notifPrefs, setNotifPrefs] = useState<UserPreferencesPayload>({
     orderUpdates: true, promotionalEmails: false, smsAlerts: true,
@@ -353,15 +355,15 @@ export const MyOrders: React.FC = () => {
   useEffect(() => {
     getUserPreferences().then((p) => {
       setNotifPrefs(p);
-      if (p.currency) setCurrency(p.currency as SupportedCurrency);
-      if (p.language) setLanguage(p.language as SupportedLanguage);
+      if (p.currency) changeCurrency(p.currency);
+      if (p.language) changeLanguage(p.language);
     }).catch(() => {});
-  }, [setCurrency, setLanguage]);
+  }, [changeCurrency, changeLanguage]);
 
   const savePreference = async (updated: UserPreferencesPayload) => {
     setNotifPrefs(updated);
-    if (updated.currency) setCurrency(updated.currency as SupportedCurrency);
-    if (updated.language) setLanguage(updated.language as SupportedLanguage);
+    if (updated.currency) changeCurrency(updated.currency);
+    if (updated.language) changeLanguage(updated.language);
     setPrefsSaving(true);
     try {
       await updateUserPreferences(updated);
@@ -436,7 +438,7 @@ export const MyOrders: React.FC = () => {
         <div>
           <Link to="/" className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-slate-400 hover:text-white transition-all">
             <ArrowRight className="h-4 w-4 text-purple-400 rotate-180" />
-            Back to Marketplace
+            {t('profile.backToMarketplace')}
           </Link>
         </div>
 
@@ -465,7 +467,7 @@ export const MyOrders: React.FC = () => {
             </div>
 
             <nav className="w-full pt-6 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-visible gap-2 lg:gap-1.5 text-xs sm:text-sm font-semibold scrollbar-none">
-              {([ ['personal','Personal Info', User], ['orders','My Orders', Package], ['addresses','Addresses', MapPin], ['settings','Settings', SettingsIcon]] as const).map(([tab, label, Icon]) => (
+              {([ ['personal', t('profile.personalInfo'), User], ['orders', t('profile.myOrders'), Package], ['addresses', t('profile.addresses'), MapPin], ['settings', t('profile.settings'), SettingsIcon]] as const).map(([tab, label, Icon]) => (
                 <button
                   key={tab} type="button" onClick={() => setActiveTab(tab)}
                   className={`w-full flex items-center justify-center lg:justify-start px-4 py-3 rounded-xl transition-all cursor-pointer whitespace-nowrap gap-3 ${activeTab === tab ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/40'}`}
@@ -491,15 +493,15 @@ export const MyOrders: React.FC = () => {
             {activeTab === 'personal' && (
               <div className="bg-[#111827] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-xl text-left animate-in fade-in duration-200 space-y-6">
                 <div>
-                  <h2 className="text-lg sm:text-xl font-bold text-white">Personal Information</h2>
-                  <p className="text-xs text-slate-400 mt-1">Update your basic profile identifiers and display location.</p>
+                  <h2 className="text-lg sm:text-xl font-bold text-white">{t('profile.personalInfoTitle')}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{t('profile.personalInfoSubtitle')}</p>
                 </div>
 
                 <form onSubmit={handleSaveProfile} className="space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
 
                     <div className="flex flex-col gap-2">
-                      <label htmlFor="p-name" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+                      <label htmlFor="p-name" className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.fullName')}</label>
                       <input id="p-name" type="text" required
                         value={profileForm.fullName}
                         onChange={e => setProfileForm({ ...profileForm, fullName: e.target.value })}
@@ -508,16 +510,16 @@ export const MyOrders: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label htmlFor="p-email" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Email Address</label>
+                      <label htmlFor="p-email" className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.emailAddress')}</label>
                       <input id="p-email" type="email" disabled
                         value={profile?.email ?? ''}
                         className="w-full bg-[#0E1524]/60 border border-slate-800/60 rounded-xl px-4 py-3 text-sm text-slate-500 cursor-not-allowed font-semibold"
                       />
-                      <p className="text-[10px] text-slate-600">Email cannot be changed here.</p>
+                      <p className="text-[10px] text-slate-600">{t('profile.emailNoChange')}</p>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label htmlFor="p-phone" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Phone Number</label>
+                      <label htmlFor="p-phone" className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.phoneNumber')}</label>
                       <input id="p-phone" type="text"
                         value={profileForm.phoneNumber}
                         onChange={e => setProfileForm({ ...profileForm, phoneNumber: e.target.value })}
@@ -527,7 +529,7 @@ export const MyOrders: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                      <label htmlFor="p-loc" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Location / City</label>
+                      <label htmlFor="p-loc" className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('profile.locationCity')}</label>
                       <input id="p-loc" type="text"
                         value={profileForm.location}
                         onChange={e => setProfileForm({ ...profileForm, location: e.target.value })}
@@ -542,10 +544,10 @@ export const MyOrders: React.FC = () => {
                       className="inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-500 disabled:opacity-60 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-purple-600/20 active:scale-[.98] cursor-pointer"
                     >
                       {savingProfile && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Save Alterations
+                      {t('profile.saveAlterations')}
                     </button>
                     {profile?.createdAt && (
-                      <p className="text-[11px] text-slate-600">Member since {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
+                      <p className="text-[11px] text-slate-600">{t('profile.memberSince')} {new Date(profile.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
                     )}
                   </div>
                 </form>
@@ -558,22 +560,22 @@ export const MyOrders: React.FC = () => {
             {activeTab === 'orders' && (
               <div className="space-y-6 animate-in fade-in duration-200 text-left">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">Order History</h2>
-                  <p className="text-xs text-slate-400 mt-1">Review your purchase and shipping history.</p>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">{t('orders.title')}</h2>
+                  <p className="text-xs text-slate-400 mt-1">{t('orders.subtitle')}</p>
                 </div>
 
                 {loadingOrders ? (
                   <div className="flex items-center justify-center py-20 text-slate-500 gap-3">
                     <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="text-sm">Loading orders...</span>
+                    <span className="text-sm">{t('orders.loading')}</span>
                   </div>
                 ) : orders.length === 0 ? (
                   <div className="bg-[#111827] border border-slate-800 rounded-2xl p-12 text-center shadow-xl">
                     <Package className="w-12 h-12 mx-auto mb-4 text-slate-700" />
-                    <h3 className="text-base font-bold text-white">No orders yet</h3>
-                    <p className="text-sm text-slate-400 mt-2">Once you place an order, it will appear here.</p>
+                    <h3 className="text-base font-bold text-white">{t('orders.noOrders')}</h3>
+                    <p className="text-sm text-slate-400 mt-2">{t('orders.noOrdersSubtitle')}</p>
                     <Link to="/" className="inline-block mt-6 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-6 py-3 rounded-xl transition-all">
-                      Start Shopping
+                      {t('orders.startShopping')}
                     </Link>
                   </div>
                 ) : (
@@ -586,17 +588,17 @@ export const MyOrders: React.FC = () => {
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 mb-4 gap-4">
                             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400">
                               <div>
-                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">Order ID</span>
+                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">{t('orders.orderId')}</span>
                                 <span className="font-mono text-white font-bold text-sm mt-0.5 block">#{order.id}</span>
                               </div>
                               <div>
-                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">Placed</span>
+                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">{t('orders.placed')}</span>
                                 <span className="font-semibold text-slate-200 mt-0.5 block">
                                   {new Date(order.orderDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                                 </span>
                               </div>
                               <div>
-                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">Total</span>
+                                <span className="block font-bold text-slate-500 uppercase tracking-wider text-[10px]">{t('orders.totalLabel')}</span>
                                 <span className="font-extrabold text-white text-sm mt-0.5 block">{formatPrice(order.totalPrice)}</span>
                               </div>
                             </div>
@@ -621,7 +623,7 @@ export const MyOrders: React.FC = () => {
                                   <h4 className="text-xs sm:text-sm font-bold text-white truncate max-w-[200px]" title={item.productName}>{item.productName}</h4>
                                   <div className="flex items-center gap-2 mt-1">
                                     <span className="text-[10px] text-slate-500 font-semibold bg-slate-900 border border-slate-800 px-1.5 py-0.5 rounded">
-                                      Qty: {item.quantity}
+                                      {t('orders.qty')}: {item.quantity}
                                     </span>
                                     <span className="text-xs text-slate-400 font-semibold font-mono">{formatPrice(item.unitPrice)}</span>
                                   </div>
@@ -631,12 +633,12 @@ export const MyOrders: React.FC = () => {
                           </div>
 
                           <div className="flex items-center justify-between pt-4 text-xs font-bold">
-                            <span className="text-slate-500 text-[11px] font-semibold">Status: {order.status}</span>
+                            <span className="text-slate-500 text-[11px] font-semibold">{t('orders.status')}: {order.status}</span>
                             <div className="flex items-center gap-2">
                               <button type="button" onClick={() => handleTrackOrder(order)}
                                 className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl shadow transition-all active:scale-[.98] cursor-pointer text-xs font-bold"
                               >
-                                Track Order
+                                {t('orders.trackOrder')}
                               </button>
                               <button type="button" title="View & Download Invoice" onClick={() => setInvoiceModalOrder(order)}
                                 className="p-2.5 text-slate-400 hover:text-white bg-[#0E1524] border border-slate-800 hover:border-slate-700 rounded-xl transition-all cursor-pointer"
@@ -854,27 +856,29 @@ export const MyOrders: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="reg-lang" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Language</label>
-                      <select id="reg-lang" value={notifPrefs.language}
+                      <select id="reg-lang"
+                        value={globalLanguage === 'az' ? 'Azerbaijani' : globalLanguage === 'tr' ? 'Turkish' : globalLanguage === 'ru' ? 'Russian' : 'English'}
                         onChange={e => savePreference({ ...notifPrefs, language: e.target.value })}
                         disabled={prefsSaving}
                         className="w-full bg-[#0E1524] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-medium cursor-pointer disabled:opacity-60"
                       >
-                        <option>English</option>
-                        <option>Azerbaijani</option>
-                        <option>Turkish</option>
-                        <option>Russian</option>
+                        <option value="English">English</option>
+                        <option value="Azerbaijani">Azerbaijani</option>
+                        <option value="Turkish">Turkish</option>
+                        <option value="Russian">Russian</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label htmlFor="reg-curr" className="text-xs font-bold text-slate-400 uppercase tracking-wider">Currency</label>
-                      <select id="reg-curr" value={notifPrefs.currency}
+                      <select id="reg-curr"
+                        value={globalCurrency === 'AZN' ? 'AZN (₼)' : globalCurrency === 'EUR' ? 'EUR (€)' : 'USD ($)'}
                         onChange={e => savePreference({ ...notifPrefs, currency: e.target.value })}
                         disabled={prefsSaving}
                         className="w-full bg-[#0E1524] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all font-medium cursor-pointer disabled:opacity-60"
                       >
-                        <option>USD ($)</option>
-                        <option>AZN (₼)</option>
-                        <option>EUR (€)</option>
+                        <option value="USD ($)">USD ($)</option>
+                        <option value="AZN (₼)">AZN (₼)</option>
+                        <option value="EUR (€)">EUR (€)</option>
                       </select>
                     </div>
                   </div>
@@ -1142,7 +1146,7 @@ export const MyOrders: React.FC = () => {
                   <p className="text-xs font-bold text-white truncate max-w-[200px]">
                     {trackingOrder.items.map(i => i.productName).join(', ')}
                   </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">For {trackingOrder.customerName}</p>
+                  <p className="text-[10px] text-slate-500 mt-0.5">{t('orders.customer')} {trackingOrder.customerName}</p>
                 </div>
               </div>
 
@@ -1150,11 +1154,11 @@ export const MyOrders: React.FC = () => {
               {trackingData && (
                 <div className="grid grid-cols-2 gap-3 bg-[#0E1524]/60 p-3 rounded-xl border border-slate-800/80 text-xs">
                   <div>
-                    <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Carrier / Service</span>
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('orders.carrier')}</span>
                     <span className="font-semibold text-slate-200">{trackingData.carrier}</span>
                   </div>
                   <div>
-                    <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Tracking Number</span>
+                    <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('orders.trackingNumber')}</span>
                     <span className="font-mono text-purple-400 font-bold">{trackingData.trackingNumber}</span>
                   </div>
                 </div>
@@ -1164,7 +1168,7 @@ export const MyOrders: React.FC = () => {
               {loadingTracking ? (
                 <div className="flex items-center justify-center py-8 text-slate-500 gap-2">
                   <Loader2 className="w-5 h-5 animate-spin text-purple-500" />
-                  <span className="text-xs">Fetching live status timeline...</span>
+                  <span className="text-xs">{t('orders.fetchingStatus')}</span>
                 </div>
               ) : (
                 <div className="space-y-5 relative pl-6">
@@ -1199,10 +1203,10 @@ export const MyOrders: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-colors cursor-pointer"
               >
                 <FileText className="w-3.5 h-3.5 text-purple-400" />
-                View Invoice
+                {t('orders.viewInvoice')}
               </button>
               <button type="button" onClick={() => { setTrackingOrder(null); setTrackingData(null); }} className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer">
-                Close Tracking
+                {t('orders.closeTracking')}
               </button>
             </div>
           </div>
@@ -1223,7 +1227,7 @@ export const MyOrders: React.FC = () => {
                   <FileText className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-extrabold text-white">Invoice Summary</h3>
+                  <h3 className="text-base font-extrabold text-white">{t('orders.invoice.title')}</h3>
                   <p className="text-xs text-slate-400 font-mono mt-0.5">Order #{invoiceModalOrder.id}</p>
                 </div>
               </div>
@@ -1240,12 +1244,12 @@ export const MyOrders: React.FC = () => {
               {/* Top Details Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#0E1524]/60 p-4 rounded-xl border border-slate-800 text-xs">
                 <div>
-                  <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Billed To</span>
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('orders.invoice.billedTo')}</span>
                   <p className="font-bold text-white mt-1">{invoiceModalOrder.customerName}</p>
                   <p className="text-slate-400 text-[11px] mt-0.5">{invoiceModalOrder.customerEmail}</p>
                 </div>
                 <div>
-                  <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">Order Date & Status</span>
+                  <span className="block text-[10px] text-slate-500 font-bold uppercase tracking-wider">{t('orders.invoice.orderDateStatus')}</span>
                   <p className="font-semibold text-slate-300 mt-1">
                     {new Date(invoiceModalOrder.orderDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </p>
@@ -1257,13 +1261,13 @@ export const MyOrders: React.FC = () => {
 
               {/* Itemized Table */}
               <div>
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Order Items</h4>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">{t('orders.invoice.orderItems')}</h4>
                 <div className="bg-[#0E1524] rounded-xl border border-slate-800 overflow-hidden">
                   <div className="grid grid-cols-12 gap-2 px-4 py-2.5 bg-slate-900/60 border-b border-slate-800 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                    <span className="col-span-6">Item Description</span>
-                    <span className="col-span-2 text-center">Qty</span>
-                    <span className="col-span-2 text-right">Price</span>
-                    <span className="col-span-2 text-right">Subtotal</span>
+                    <span className="col-span-6">{t('orders.invoice.itemDescription')}</span>
+                    <span className="col-span-2 text-center">{t('orders.invoice.qty')}</span>
+                    <span className="col-span-2 text-right">{t('orders.invoice.price')}</span>
+                    <span className="col-span-2 text-right">{t('orders.invoice.subtotal')}</span>
                   </div>
 
                   <div className="divide-y divide-slate-800/60">
@@ -1280,8 +1284,8 @@ export const MyOrders: React.FC = () => {
                           <span className="font-semibold text-white truncate" title={item.productName}>{item.productName}</span>
                         </div>
                         <span className="col-span-2 text-center font-semibold text-slate-300">x{item.quantity}</span>
-                        <span className="col-span-2 text-right font-mono text-slate-400">${item.unitPrice.toFixed(2)}</span>
-                        <span className="col-span-2 text-right font-mono font-bold text-white">${(item.unitPrice * item.quantity).toFixed(2)}</span>
+                        <span className="col-span-2 text-right font-mono text-slate-400">{formatPrice(item.unitPrice)}</span>
+                        <span className="col-span-2 text-right font-mono font-bold text-white">{formatPrice(item.unitPrice * item.quantity)}</span>
                       </div>
                     ))}
                   </div>
@@ -1292,20 +1296,20 @@ export const MyOrders: React.FC = () => {
               <div className="flex justify-end">
                 <div className="w-full sm:w-64 space-y-2 text-xs bg-[#0E1524]/60 p-4 rounded-xl border border-slate-800">
                   <div className="flex justify-between text-slate-400">
-                    <span>Subtotal</span>
-                    <span className="font-mono text-slate-200">${invoiceModalOrder.totalPrice.toFixed(2)}</span>
+                    <span>{t('orders.invoice.subtotal')}</span>
+                    <span className="font-mono text-slate-200">{formatPrice(invoiceModalOrder.totalPrice)}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
-                    <span>Shipping</span>
-                    <span className="text-emerald-400 font-semibold">FREE</span>
+                    <span>{t('orders.invoice.shipping')}</span>
+                    <span className="text-emerald-400 font-semibold">{t('common.free')}</span>
                   </div>
                   <div className="flex justify-between text-slate-400">
-                    <span>Tax (0%)</span>
-                    <span className="font-mono text-slate-200">$0.00</span>
+                    <span>{t('orders.invoice.tax')}</span>
+                    <span className="font-mono text-slate-200">{formatPrice(0)}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t border-slate-800 text-sm font-extrabold text-white">
-                    <span>Total Amount</span>
-                    <span className="font-mono text-purple-400">${invoiceModalOrder.totalPrice.toFixed(2)}</span>
+                    <span>{t('orders.invoice.totalAmount')}</span>
+                    <span className="font-mono text-purple-400">{formatPrice(invoiceModalOrder.totalPrice)}</span>
                   </div>
                 </div>
               </div>
@@ -1314,12 +1318,12 @@ export const MyOrders: React.FC = () => {
 
             {/* Footer Actions */}
             <div className="p-4 border-t border-slate-800 bg-[#0B1120] flex items-center justify-between">
-              <span className="text-[11px] text-slate-500 hidden sm:inline">Official TradeHub Transaction Receipt</span>
+              <span className="text-[11px] text-slate-500 hidden sm:inline">{t('orders.invoice.receipt')}</span>
               <div className="flex items-center gap-3 ml-auto">
                 <button type="button" onClick={() => setInvoiceModalOrder(null)}
                   className="px-4 py-2.5 rounded-xl border border-slate-800 hover:border-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  Close
+                  {t('orders.invoice.close')}
                 </button>
                 <button type="button" onClick={() => handleDownloadInvoice(invoiceModalOrder.id)} disabled={downloadingInvoiceId === invoiceModalOrder.id}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/20 active:scale-[.98] cursor-pointer disabled:opacity-60"
@@ -1327,12 +1331,12 @@ export const MyOrders: React.FC = () => {
                   {downloadingInvoiceId === invoiceModalOrder.id ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Downloading...
+                      {t('orders.invoice.downloading')}
                     </>
                   ) : (
                     <>
                       <Download className="w-4 h-4" />
-                      Download PDF / Invoice
+                      {t('orders.invoice.downloadPdf')}
                     </>
                   )}
                 </button>

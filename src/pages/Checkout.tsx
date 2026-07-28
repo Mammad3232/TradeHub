@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, MapPin, User, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
+import { useCurrency } from '../context/CurrencyContext';
+import { useTranslation } from 'react-i18next';
 import { createOrder } from '../services/orderService';
 
 interface FormData {
@@ -34,6 +36,8 @@ interface PaymentErrors {
 
 export const Checkout: React.FC = () => {
   const { cartItems, clearCart } = useShop();
+  const { formatPrice } = useCurrency();
+  const { t } = useTranslation();
   const [step, setStep] = useState<'shipping' | 'payment' | 'success'>('shipping');
   const navigate = useNavigate();
 
@@ -250,7 +254,7 @@ export const Checkout: React.FC = () => {
         <div className="bg-emerald-500/10 border border-emerald-500/20 p-6 rounded-full animate-bounce">
           <CheckCircle className="h-14 w-14 text-emerald-400" />
         </div>
-        <h2 className="text-3xl font-extrabold text-white">Order Placed!</h2>
+        <h2 className="text-3xl font-extrabold text-white">{t('checkout.orderPlaced')}</h2>
         <p className="text-slate-400">Redirecting you to your orders...</p>
       </div>
     );
@@ -259,7 +263,7 @@ export const Checkout: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0B1120] text-slate-100 py-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">Checkout</h1>
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">{t('checkout.title')}</h1>
 
         {/* Step indicators */}
         <div className="flex items-center space-x-4 text-sm bg-slate-900/40 p-4 rounded-xl border border-slate-800/60">
@@ -273,7 +277,7 @@ export const Checkout: React.FC = () => {
                 }`}>
                   {i + 1}
                 </span>
-                <span className="capitalize">{s}</span>
+                <span className="capitalize">{s === 'shipping' ? t('checkout.shippingAddress') : t('checkout.paymentDetails')}</span>
               </div>
               {i === 0 && <div className="flex-1 h-px bg-slate-800"></div>}
             </React.Fragment>
@@ -294,7 +298,7 @@ export const Checkout: React.FC = () => {
             >
               <div className="flex items-center space-x-2 text-indigo-400 border-b border-slate-800 pb-3">
                 <MapPin className="h-5 w-5" />
-                <h2 className="font-bold text-white text-lg">Shipping Address</h2>
+                <h2 className="font-bold text-white text-lg">{t('checkout.shippingAddress')}</h2>
               </div>
 
               {/* Full Name Field */}

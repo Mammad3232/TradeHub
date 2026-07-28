@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { LucideIcon } from 'lucide-react';
 import {
   Tv, Shirt, Home as HomeIcon, BookOpen, Dumbbell, Coffee,
@@ -216,6 +217,7 @@ export const ShopByCategory: React.FC<ShopByCategoryProps> = ({
   selectedCategory,
   onSelectCategory,
 }) => {
+  const { t } = useTranslation();
   const activeCategoryObj = findCategory(selectedCategory);
 
   const handleCategoryClick = (category: Category) => {
@@ -236,13 +238,13 @@ export const ShopByCategory: React.FC<ShopByCategoryProps> = ({
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold uppercase tracking-wider mb-2">
               <Layers className="w-3.5 h-3.5" />
-              <span>Explore Categories</span>
+              <span>{t('categories.badge')}</span>
             </div>
             <h2 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight">
-              Browse Marketplace
+              {t('categories.title')}
             </h2>
             <p className="text-slate-400 text-sm md:text-base mt-1">
-              Select a category to explore departments and discover products from top brands.
+              {t('categories.subtitle')}
             </p>
           </div>
         </div>

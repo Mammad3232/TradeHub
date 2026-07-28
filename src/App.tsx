@@ -36,7 +36,7 @@ import { VendorRoute } from './components/VendorRoute';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PageTracker } from './components/PageTracker';
 
-import { CurrencyProvider } from './context/CurrencyContext';
+import { PreferencesProvider } from './context/PreferencesContext';
 
 // ── Shared user type (single source of truth for the whole app) ───────────────
 export interface CurrentUser {
@@ -262,7 +262,7 @@ function App() {
   }, []);
 
   return (
-    <CurrencyProvider>
+    <PreferencesProvider>
       <ShopProvider>
         <Router>
           <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
@@ -359,7 +359,7 @@ function App() {
           </NotificationProvider>
         </Router>
       </ShopProvider>
-    </CurrencyProvider>
+    </PreferencesProvider>
   );
 }
 

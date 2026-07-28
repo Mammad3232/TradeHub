@@ -3,12 +3,17 @@ import { Link, useSearchParams } from "react-router-dom";
 import { ShopByCategory } from "../components/ShopByCategory";
 import { ProductGrid } from "../components/ProductGrid";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useCurrency } from "../context/CurrencyContext";
+import { useTranslation } from "react-i18next";
 
 export const Home: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedCategory = searchParams.get("category");
   const selectedSubcategory = searchParams.get("subcategory");
   const selectedBrand = searchParams.get("brand");
+
+  const { formatPrice } = useCurrency();
+  const { t } = useTranslation();
 
   const handleSelectCategory = (catNameOrId: string | null) => {
     setSearchParams(
@@ -84,18 +89,18 @@ export const Home: React.FC = () => {
           <div className="text-left space-y-6 max-w-2xl">
             <div className="inline-flex items-center space-x-2 bg-purple-500/10 border border-purple-500/25 rounded-full px-4 py-1.5 text-xs text-purple-400 font-semibold tracking-wide">
               <Sparkles className="h-3.5 w-3.5 text-purple-400" />
-              <span>SUMMER SALE - GET UP TO 50% OFF</span>
+              <span>{t('hero.saleBadge')}</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
-              A Premium Space For{" "}
+              {t('hero.titlePrefix')}{" "}
               <span className="bg-gradient-to-r from-purple-500 via-indigo-400 to-sky-400 bg-clip-text text-transparent">
-                Modern Shopping
+                {t('hero.titleHighlight')}
               </span>
             </h1>
 
             <p className="text-base sm:text-lg text-slate-300 leading-relaxed">
-              Explore hundreds of handpicked items from verified independent creators and global vendors. Enjoy flat shipping fees and real-time tracking.
+              {t('hero.description')}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-2">
@@ -107,14 +112,14 @@ export const Home: React.FC = () => {
                 }}
                 className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3.5 px-8 rounded-xl shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-center space-x-2 cursor-pointer"
               >
-                <span>Shop Now</span>
+                <span>{t('hero.shopNow')}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
               <Link
                 to="/vendor-register"
                 className="w-full sm:w-auto bg-transparent hover:bg-slate-800/50 text-slate-300 hover:text-white font-medium py-3.5 px-8 rounded-xl border border-slate-700 transition-all duration-200 text-center"
               >
-                Become a Vendor
+                {t('hero.becomeVendor')}
               </Link>
             </div>
           </div>
@@ -135,7 +140,7 @@ export const Home: React.FC = () => {
                 </div>
                 <div className="absolute bottom-6 left-6 right-6 text-left">
                   <h3 className="font-extrabold text-white text-lg tracking-tight">Aether Sound Wave Pro</h3>
-                  <p className="text-sm mt-1 font-semibold text-slate-300">$299.99 - Free Shipping</p>
+                  <p className="text-sm mt-1 font-semibold text-slate-300">{formatPrice(299.99)} - {t('hero.freeShipping')}</p>
                 </div>
               </div>
             </div>

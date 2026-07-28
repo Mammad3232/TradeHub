@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTranslation } from 'react-i18next';
 import { AdminNotificationBell } from './AdminNotificationBell';
 
 const BACKEND_ORIGIN = 'http://localhost:5229';
@@ -85,6 +86,10 @@ export const Header: React.FC<HeaderProps> = ({
     miniCartOpen,
     setMiniCartOpen,
   } = useShop();
+
+  // ── Translation & currency ───────────────────────────────────────────────
+  const { formatPrice } = useCurrency();
+  const { t } = useTranslation();
 
   // ── Auth ────────────────────────────────────────────────────────────────
   const handleLogout = () => {
@@ -413,7 +418,7 @@ export const Header: React.FC<HeaderProps> = ({
                         setQuery(e.target.value);
                         setShowSuggestions(true);
                       }}
-                      placeholder="Search for products, brands and more..."
+                      placeholder={t('search.placeholder')}
                       className="w-full bg-transparent border-none text-sm text-white px-4 py-2.5 outline-none placeholder:text-slate-500"
                     />
 
@@ -732,22 +737,22 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="p-1.5 space-y-0.5">
                           <Link to="/my-orders" onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors">
-                            <User className="w-4 h-4 text-slate-500" /> My Profile
+                            <User className="w-4 h-4 text-slate-500" /> {t('nav.profile')}
                           </Link>
                           <Link to="/my-orders" onClick={() => setProfileOpen(false)}
                             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-800/60 transition-colors">
-                            <ShoppingBag className="w-4 h-4 text-slate-500" /> My Orders
+                            <ShoppingBag className="w-4 h-4 text-slate-500" /> {t('nav.myOrders')}
                           </Link>
                           {isAdmin && (
                             <Link to="/admin" onClick={() => setProfileOpen(false)}
                               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/8 transition-colors">
-                              <ShieldCheck className="w-4 h-4" /> Admin Panel
+                              <ShieldCheck className="w-4 h-4" /> {t('nav.adminPanel')}
                             </Link>
                           )}
                           {isVendor && (
                             <Link to="/vendor/dashboard" onClick={() => setProfileOpen(false)}
                               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-semibold text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/8 transition-colors">
-                              <LayoutDashboard className="w-4 h-4" /> Vendor Dashboard
+                              <LayoutDashboard className="w-4 h-4" /> {t('nav.vendorDashboard')}
                             </Link>
                           )}
                         </div>
@@ -755,7 +760,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <div className="p-1.5 border-t border-slate-800/80">
                           <button type="button" onClick={handleLogout}
                             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm text-slate-400 hover:text-rose-400 hover:bg-rose-500/8 transition-colors cursor-pointer">
-                            <X className="w-4 h-4" /> Sign Out
+                            <X className="w-4 h-4" /> {t('nav.signOut')}
                           </button>
                         </div>
                       </div>
