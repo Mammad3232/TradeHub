@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { Link } from "react-router-dom";
 import {
   Star, ShoppingCart, Heart, Check, Loader2,
   SearchX, Tag, X, Layers, Filter, RotateCcw, FolderTree, ChevronRight, Grid,
-  DollarSign, SlidersHorizontal, Award, Search, ArrowUpDown,
+  DollarSign, SlidersHorizontal, Award, Search, ArrowUpDown, Eye,
 } from "lucide-react";
 import { useShop } from "../context/ShopContext";
 import { useCurrency } from "../context/CurrencyContext";
 import { useTranslation } from "react-i18next";
+import { QuickViewModal } from "./QuickViewModal";
 import { getProducts } from "../services/api";
 import { getBrands, type Brand } from "../services/productService";
 import {
@@ -115,6 +117,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
   const [allProducts, setAllProducts] = useState<ProductCardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [addedIds, setAddedIds] = useState<Record<number, boolean>>({});
+  const [quickViewProduct, setQuickViewProduct] = useState<ProductCardItem | null>(null);
 
   /* ── Sidebar local filter state ─────────────────────────────── */
   const [minPrice, setMinPrice] = useState<string>("");
@@ -1092,7 +1095,21 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                             loading="lazy"
                             onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
                           />
-                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                          {/* Centered Quick View button overlay */}
+                          <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setQuickViewProduct(product);
+                              }}
+                              className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2.5 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              {t('product.quickView')}
+                            </button>
+                          </div>
                           <button
                             type="button"
                             onClick={(e) => handleToggleWishlist(product, e)}
@@ -1117,8 +1134,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                             <span className="uppercase text-amber-400 font-extrabold">{product.brand}</span>
                             <span className="text-purple-400">{product.category}</span>
                           </div>
-                          <h3 className="font-semibold text-slate-100 text-sm leading-snug line-clamp-2 group-hover:text-purple-300 transition-colors">
-                            {product.title}
+                          <h3 className="font-semibold text-slate-100 text-sm leading-snug line-clamp-2 transition-colors">
+                            <Link to={`/product/${product.id}`} className="hover:text-purple-400 transition-colors">
+                              {product.title}
+                            </Link>
                           </h3>
                           <div className="flex items-center gap-1">
                             <div className="flex items-center gap-0.5">
@@ -1228,6 +1247,13 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 
         </div>
       </div>
+      {quickViewProduct && (
+        <QuickViewModal
+          product={quickViewProduct as any}
+          isOpen={!!quickViewProduct}
+          onClose={() => setQuickViewProduct(null)}
+        />
+      )}
     </section>
   );
 };

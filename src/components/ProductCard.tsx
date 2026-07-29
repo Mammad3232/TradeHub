@@ -4,6 +4,8 @@ import { Star, Store, ShoppingCart, Heart, Eye } from 'lucide-react';
 import type { Product } from '../services/api';
 import { useShop } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTranslation } from 'react-i18next';
+import { QuickViewModal } from './QuickViewModal';
 
 // ── Image URL resolver ────────────────────────────────────────────────────────
 // If the backend returns a relative path (e.g. /uploads/products/xyz.jpg),
@@ -54,11 +56,13 @@ const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, pushToast, toggleWishlist, isWishlisted } = useShop();
-  const { formatPrice, t } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const { t } = useTranslation();
   const isWish = isWishlisted ? isWishlisted(product.id) : false;
   const [wishlisted, setWishlisted] = useState(isWish);
   const [addedToCart, setAddedToCart] = useState(false);
   const [imgSrc, setImgSrc] = useState(() => resolveImage(product.image));
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
   const handleAddToCart = (e?: React.MouseEvent) => {
     e?.preventDefault();
@@ -110,31 +114,33 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           onError={() => setImgSrc(PLACEHOLDER)}
         />
 
-        {/* Overlay actions (appear on hover) */}
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-        {/* Quick-view button */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-          <Link
-            to={`/product/${product.id}`}
-            className="inline-flex items-center gap-1.5 bg-white/10 backdrop-blur-md text-white text-xs font-semibold px-3.5 py-1.5 rounded-full border border-white/20 hover:bg-white/20 transition-all"
+        {/* Overlay actions (appear on hover) with centered Quick View button */}
+        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsQuickViewOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             <Eye className="h-3.5 w-3.5" />
-            Quick View
-          </Link>
+            {t('product.quickView')}
+          </button>
         </div>
 
         {/* Wishlist button */}
         <button
           onClick={handleToggleWishlist}
-          className="absolute top-3 right-3 p-1.5 rounded-full bg-slate-900/70 backdrop-blur-sm border border-slate-700/50 text-slate-400 hover:text-white transition-all hover:scale-110"
+          className="absolute top-3 right-3 z-10 p-1.5 rounded-full bg-slate-900/70 backdrop-blur-sm border border-slate-700/50 text-slate-400 hover:text-white transition-all hover:scale-110 cursor-pointer"
           aria-label="Wishlist"
         >
           <Heart className={`h-4 w-4 transition-colors ${wishlisted ? 'fill-red-400 text-red-400' : ''}`} />
         </button>
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 z-10">
           <span className="bg-slate-900/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 rounded-full text-indigo-400 border border-indigo-500/20">
             {product.category}
           </span>
@@ -156,8 +162,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </div>
 
         {/* Title */}
-        <h3 className="font-bold text-slate-100 text-sm leading-snug line-clamp-2 group-hover:text-indigo-300 transition-colors">
-          {product.title}
+        <h3 className="font-bold text-slate-100 text-sm leading-snug line-clamp-2 transition-colors">
+          <Link to={`/product/${product.id}`} className="hover:text-indigo-400 transition-colors">
+            {product.title}
+          </Link>
         </h3>
 
         {/* Star rating */}
@@ -176,7 +184,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         {/* ── Add to Cart Button ──────────────────────────────────── */}
         <button
           onClick={handleAddToCart}
-          className={`w-full flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-4 rounded-xl transition-all duration-200 ${
+          className={`w-full flex items-center justify-center gap-2 font-semibold text-sm py-2.5 px-4 rounded-xl transition-all duration-200 cursor-pointer ${
             addedToCart
               ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
               : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/15 hover:shadow-indigo-500/25 active:scale-[.98]'
@@ -186,6 +194,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           {addedToCart ? '✓ Added to Cart!' : 'Add to Cart'}
         </button>
       </div>
+
+      {isQuickViewOpen && (
+        <QuickViewModal
+          product={product}
+          isOpen={isQuickViewOpen}
+          onClose={() => setIsQuickViewOpen(false)}
+        />
+      )}
     </article>
   );
 };

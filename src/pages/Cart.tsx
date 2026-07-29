@@ -20,12 +20,14 @@ import {
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTranslation } from 'react-i18next';
 import { createOrder } from '../services/orderService';
 
 export const Cart: React.FC = () => {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQty, clearCart, cartTotal, pushToast } = useShop();
-  const { formatPrice, t } = useCurrency();
+  const { formatPrice } = useCurrency();
+  const { t } = useTranslation();
 
   // ── Shipping Form State ──────────────────────────────────────────────────
   const [fullName, setFullName] = useState('');

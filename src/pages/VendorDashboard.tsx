@@ -426,7 +426,7 @@ export const VendorDashboard: React.FC = () => {
               <div className="w-9 h-9 rounded-full bg-purple-600/15 text-purple-400 border border-purple-500/20 flex items-center justify-center font-bold text-xs select-none flex-shrink-0">
                 {settings.storeName
                   .split(' ')
-                  .map((s) => s[0])
+                  .map((s: string) => s[0])
                   .join('')
                   .toUpperCase()
                   .slice(0, 2) || 'TS'}

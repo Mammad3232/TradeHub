@@ -33,6 +33,21 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IStockAlertService, StockAlertService>();
 
+// ── AI Chat Proxy Services ───────────────────────────────────────────────────
+// HttpClient factory — the Groq client gets its base configuration here.
+// The API key is injected at request time from configuration (user-secrets in dev,
+// environment variable in production) and NEVER exposed to the browser.
+builder.Services.AddHttpClient("Groq", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// Singleton conversation store: holds in-memory message history keyed by conversationId.
+builder.Services.AddSingleton<ConversationStore>();
+
+// Scoped per request so it can use the scoped AppDbContext.
+builder.Services.AddScoped<IChatService, ChatService>();
+
 // ── 3. JWT Authentication ────────────────────────────────────────────────────
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("JWT Key is missing from configuration.");
@@ -146,6 +161,22 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+
+// ── API Key presence check (warn loudly on startup if missing) ──────────────
+var aiApiKey = builder.Configuration["AiApi:ApiKey"];
+if (string.IsNullOrWhiteSpace(aiApiKey))
+{
+    Console.ForegroundColor = ConsoleColor.Yellow;
+    Console.WriteLine("[WARNING] AiApi:ApiKey is not configured. The AI chat endpoint (POST /api/chat/message) will return a service-unavailable response.");
+    Console.WriteLine("[WARNING] To enable it locally, run: dotnet user-secrets set \"AiApi:ApiKey\" \"sk-ant-YOUR_KEY\"");
+    Console.ResetColor();
+}
+else
+{
+    Console.ForegroundColor = ConsoleColor.Green;
+    Console.WriteLine("[INFO] AiApi:ApiKey is configured. AI chat proxy is enabled.");
+    Console.ResetColor();
+}
 
 var app = builder.Build();
 

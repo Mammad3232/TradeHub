@@ -19,7 +19,7 @@ import {
   getUserPreferences, updateUserPreferences, deleteMyAccount,
   type ProfileData, type AddressData, type UpsertAddressPayload, type UserPreferencesPayload,
 } from '../services/accountService';
-import { usePreferences, normalizeCurrency, normalizeLanguage, type SupportedCurrency, type SupportedLanguage } from '../context/PreferencesContext';
+import { usePreferences, normalizeCurrency, normalizeLanguage, type CurrencyCode as SupportedCurrency, type LanguageCode as SupportedLanguage } from '../context/PreferencesContext';
 
 // ── Status helpers ─────────────────────────────────────────────────────────────
 
@@ -1064,7 +1064,7 @@ export const MyOrders: React.FC = () => {
                     <PhoneInput
                       country={'az'}
                       value={addrForm.phone || ''}
-                      onChange={(phoneVal) => {
+                      onChange={(phoneVal: string) => {
                         const formatted = phoneVal ? (phoneVal.startsWith('+') ? phoneVal : `+${phoneVal}`) : '';
                         setAddrForm({ ...addrForm, phone: formatted });
                         if (fieldErrors.phone) setFieldErrors(prev => ({ ...prev, phone: '' }));

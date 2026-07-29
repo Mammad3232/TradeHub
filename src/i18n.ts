@@ -52,6 +52,8 @@ export const resources = {
         reviews: 'verified reviews',
         purchaseValue: 'Purchase Value',
         platformChoice: 'Platform Choice',
+        category: 'Category',
+        viewFullDetails: 'View Full Details',
       },
       catalog: {
         title: 'Marketplace Catalog',
@@ -271,6 +273,8 @@ export const resources = {
         reviews: 'rəy bildirilib',
         purchaseValue: 'Məhsulun Qiyməti',
         platformChoice: 'Platforma Seçimi',
+        category: 'Kateqoriya',
+        viewFullDetails: 'Tam Təfərrüatlara Bax',
       },
       catalog: {
         title: 'Məhsul Kataloqu',
@@ -490,6 +494,8 @@ export const resources = {
         reviews: 'doğrulanmış yorum',
         purchaseValue: 'Ürün Fiyatı',
         platformChoice: 'Platform Seçimi',
+        category: 'Kategori',
+        viewFullDetails: 'Tüm Detayları Görüntüle',
       },
       catalog: {
         title: 'Ürün Kataloğu',
@@ -709,6 +715,8 @@ export const resources = {
         reviews: 'подтвержденных отзывов',
         purchaseValue: 'Стоимость товара',
         platformChoice: 'Выбор платформы',
+        category: 'Категория',
+        viewFullDetails: 'Посмотреть все детали',
       },
       catalog: {
         title: 'Каталог товаров',

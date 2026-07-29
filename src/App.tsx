@@ -35,6 +35,7 @@ import { AdminRoute } from './components/AdminRoute';
 import { VendorRoute } from './components/VendorRoute';
 import { ScrollToTop } from './components/ScrollToTop';
 import { PageTracker } from './components/PageTracker';
+import { ChatWidget } from './components/ChatWidget';
 
 import { PreferencesProvider } from './context/PreferencesContext';
 
@@ -118,6 +119,8 @@ const PublicLayout: React.FC<LayoutProps> = ({ currentUser, siteSettings, onSign
       <Outlet />
     </main>
     <Footer currentUser={currentUser} />
+    {/* AI Chat Widget — floating bottom-right, visible on all public pages */}
+    <ChatWidget />
   </div>
 );
 
