@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import RawPhoneInput from 'react-phone-input-2';
@@ -9,12 +9,12 @@ import {
   User, MapPin, Package, Settings as SettingsIcon, Download, FileText,
   ArrowRight, CheckCircle2, Truck, RotateCcw, Bell, Lock,
   Globe, ShieldAlert, Eye, EyeOff, Trash2, KeyRound, Plus,
-  Edit3, Star, Loader2, X, Check,
+  Edit3, Star, Loader2, X, Check, Camera,
 } from 'lucide-react';
 import { getMyOrders, getOrderTracking, downloadOrderInvoice, type OrderResponse, type OrderTrackingData } from '../services/orderService';
 import { getImageUrl } from '../services/productService';
 import {
-  getMyProfile, updateMyProfile, changePassword,
+  getMyProfile, updateMyProfile, uploadAvatar, deleteAvatar, changePassword,
   getAddresses, createAddress, updateAddress, deleteAddress, setPrimaryAddress,
   getUserPreferences, updateUserPreferences, deleteMyAccount,
   type ProfileData, type AddressData, type UpsertAddressPayload, type UserPreferencesPayload,
@@ -69,6 +69,98 @@ export const MyOrders: React.FC = () => {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [profileForm, setProfileForm] = useState({ fullName: '', phoneNumber: '', location: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isViewAvatarOpen, setIsViewAvatarOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isViewAvatarOpen) setIsViewAvatarOpen(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isViewAvatarOpen]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type.toLowerCase())) {
+      showToast('Invalid file format. Please upload PNG, JPG, or WEBP.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('File size exceeds 5MB limit.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    // Optimistic local preview
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    setUploadingAvatar(true);
+    try {
+      const updated = await uploadAvatar(file);
+      setProfile(updated);
+
+      // Synchronize localStorage and notify application (Header, Navbar)
+      const userKeys = ['vendora_user', 'vendora_active_user', 'mockUser'];
+      for (const key of userKeys) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            parsed.avatarUrl = updated.avatarUrl;
+            localStorage.setItem(key, JSON.stringify(parsed));
+          } catch { /* ignore */ }
+        }
+      }
+      window.dispatchEvent(new Event('vendora_user_update'));
+      showToast('Profile picture updated successfully!', 'success');
+    } catch (err: any) {
+      setAvatarPreview(null);
+      showToast(err?.message || 'Failed to upload profile picture.', 'error');
+    } finally {
+      setUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleAvatarDelete = async () => {
+    if (uploadingAvatar) return;
+    setUploadingAvatar(true);
+    try {
+      const updated = await deleteAvatar();
+      setProfile(updated);
+      setAvatarPreview(null);
+
+      // Clear avatarUrl in localStorage sessions
+      const userKeys = ['vendora_user', 'vendora_active_user', 'mockUser'];
+      for (const key of userKeys) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            delete parsed.avatarUrl;
+            localStorage.setItem(key, JSON.stringify(parsed));
+          } catch { /* ignore */ }
+        }
+      }
+      window.dispatchEvent(new Event('vendora_user_update'));
+      showToast('Profile picture removed successfully!', 'success');
+    } catch (err: any) {
+      showToast(err?.message || 'Failed to remove profile picture.', 'error');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   useEffect(() => {
     getMyProfile()
@@ -421,6 +513,16 @@ export const MyOrders: React.FC = () => {
   const displayEmail = profile?.email || '';
   const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
 
+  const resolveAvatarSrc = (rawUrl?: string | null) => {
+    if (!rawUrl) return null;
+    if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('blob:') || rawUrl.startsWith('data:')) {
+      return rawUrl;
+    }
+    return `http://localhost:5229${rawUrl.startsWith('/') ? '' : '/'}${rawUrl}`;
+  };
+
+  const currentAvatarSrc = avatarPreview || resolveAvatarSrc(profile?.avatarUrl);
+
   return (
     <div className="bg-[#060913] min-h-screen text-slate-200 pb-20 font-sans">
 
@@ -449,11 +551,88 @@ export const MyOrders: React.FC = () => {
             <div className="absolute top-0 right-0 w-24 h-24 bg-purple-600/5 rounded-full blur-2xl pointer-events-none" />
 
             <div className="space-y-4 w-full pb-6 border-b border-slate-800/80">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 p-1 shadow-xl shadow-purple-600/20 mx-auto flex items-center justify-center relative group ring-4 ring-purple-500/20">
-                <span className="w-full h-full bg-[#111827] rounded-full flex items-center justify-center font-extrabold text-2xl text-white group-hover:bg-purple-900/20 transition-colors">
-                  {initials || '?'}
-                </span>
-                <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-[#111827] rounded-full ring-2 ring-emerald-500/30" />
+              <div
+                onClick={() => {
+                  if (!currentAvatarSrc) fileInputRef.current?.click();
+                }}
+                className="w-20 h-20 rounded-full bg-gradient-to-tr from-purple-600 to-indigo-600 p-1 shadow-xl shadow-purple-600/20 mx-auto flex items-center justify-center relative group ring-4 ring-purple-500/20 cursor-pointer overflow-hidden transition-all duration-300 hover:ring-purple-400/50 hover:scale-105"
+                title={currentAvatarSrc ? undefined : "Click to upload profile picture"}
+              >
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  className="hidden"
+                />
+
+                {/* Avatar Image or Initials Fallback */}
+                {currentAvatarSrc ? (
+                  <img
+                    src={currentAvatarSrc}
+                    alt={displayName}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="w-full h-full bg-[#111827] rounded-full flex items-center justify-center font-extrabold text-2xl text-white group-hover:bg-purple-900/20 transition-colors">
+                    {initials || '?'}
+                  </span>
+                )}
+
+                {/* Interactive Hover Overlay with View, Change, Delete icons when image exists */}
+                {currentAvatarSrc ? (
+                  <div className="absolute inset-0 bg-slate-950/80 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-1.5 text-white z-10 p-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsViewAvatarOpen(true);
+                      }}
+                      className="p-1.5 rounded-full bg-slate-800/90 hover:bg-purple-600 text-slate-200 hover:text-white transition-all transform hover:scale-110 shadow-lg cursor-pointer"
+                      title="View full size"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="p-1.5 rounded-full bg-slate-800/90 hover:bg-purple-600 text-slate-200 hover:text-white transition-all transform hover:scale-110 shadow-lg cursor-pointer"
+                      title="Change picture"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAvatarDelete();
+                      }}
+                      className="p-1.5 rounded-full bg-slate-800/90 hover:bg-rose-600 text-slate-200 hover:text-white transition-all transform hover:scale-110 shadow-lg cursor-pointer"
+                      title="Remove picture"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 bg-slate-950/75 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center text-white z-10">
+                    <Camera className="w-5 h-5 text-purple-300 group-hover:scale-110 transition-transform" />
+                    <span className="text-[9px] font-extrabold tracking-wider mt-0.5 text-purple-200 uppercase">Upload</span>
+                  </div>
+                )}
+
+                {/* Loading Spinner Overlay */}
+                {uploadingAvatar && (
+                  <div className="absolute inset-0 bg-slate-950/85 rounded-full flex flex-col items-center justify-center z-20">
+                    <Loader2 className="w-6 h-6 text-purple-400 animate-spin" />
+                  </div>
+                )}
+
+                {/* Online Indicator */}
+                <span className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-[#111827] rounded-full ring-2 ring-emerald-500/30 z-20" />
               </div>
               <div>
                 <h3 className="text-base font-extrabold text-white leading-tight">{displayName}</h3>
@@ -1343,6 +1522,42 @@ export const MyOrders: React.FC = () => {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ── View Avatar Modal (Lightbox) ─────────────────────────────────── */}
+      {isViewAvatarOpen && currentAvatarSrc && (
+        <div
+          className="fixed inset-0 z-[600] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setIsViewAvatarOpen(false)}
+        >
+          <div
+            className="relative max-w-md w-full bg-[#0E1524] border border-slate-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-4 mb-4 border-b border-slate-800/80">
+              <div>
+                <h3 className="text-base font-bold text-white">{displayName}</h3>
+                <p className="text-xs text-slate-400">Profile Picture</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsViewAvatarOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-2xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-900/30 bg-slate-900 flex items-center justify-center relative">
+              <img
+                src={currentAvatarSrc}
+                alt={displayName}
+                className="w-full h-full object-cover"
+              />
+            </div>
           </div>
         </div>
       )}

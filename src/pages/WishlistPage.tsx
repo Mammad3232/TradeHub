@@ -249,14 +249,16 @@ export const WishlistPage: React.FC = () => {
                     className="group relative bg-[#0E1524] border border-slate-800 rounded-3xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl"
                   >
                     {/* Product Image Box */}
-                    <div className="relative h-60 w-full overflow-hidden bg-slate-950 rounded-t-3xl">
-                      <img
-                        src={product.image}
-                        alt={product.title}
-                        className={`w-full h-full object-cover rounded-t-3xl transition-transform duration-500 ${
-                          isInStock ? 'group-hover:scale-105' : 'grayscale opacity-75'
-                        }`}
-                      />
+                    <div className="relative h-60 w-full overflow-hidden bg-slate-950 rounded-t-3xl cursor-pointer">
+                      <Link to={`/product/${product.id}`} className="block w-full h-full">
+                        <img
+                          src={product.image}
+                          alt={product.title}
+                          className={`w-full h-full object-cover rounded-t-3xl transition-transform duration-500 ${
+                            isInStock ? 'group-hover:scale-105' : 'grayscale opacity-75'
+                          }`}
+                        />
+                      </Link>
 
                       {/* Faded overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -299,8 +301,10 @@ export const WishlistPage: React.FC = () => {
                         <span>{product.brand}</span>
                       </div>
 
-                      <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 group-hover:text-purple-300 transition-colors">
-                        {product.title}
+                      <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 transition-colors">
+                        <Link to={`/product/${product.id}`} className="hover:text-purple-300 transition-colors">
+                          {product.title}
+                        </Link>
                       </h3>
 
                       {/* Rating stars */}

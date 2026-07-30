@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -17,10 +17,21 @@ import {
   Check,
   Loader2,
   PackageX,
+  Clock,
+  Compass,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
-import { getProductById } from '../services/productService';
+import {
+  getProductById,
+  trackProductView,
+  getRecommendations,
+  getRecentlyViewed,
+  type Product as ProductType,
+} from '../services/productService';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const BACKEND_ORIGIN = 'http://localhost:5229';
@@ -104,18 +115,79 @@ export const ProductDetail: React.FC = () => {
   const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
   const [isExpandedImage, setIsExpandedImage]   = useState<boolean>(false);
 
-  // Fetch product on mount / id change
+  // Recommendations & Recently Viewed state
+  const [recommendations, setRecommendations] = useState<ProductType[]>([]);
+  const [recsLoading, setRecsLoading]         = useState<boolean>(false);
+  const [recentlyViewed, setRecentlyViewed]   = useState<ProductType[]>([]);
+  const [recentLoading, setRecentLoading]     = useState<boolean>(false);
+
+  // Ref to prevent duplicate view-tracking calls for the same product
+  const trackedViewIdRef = useRef<number | null>(null);
+
+  // Refs and scroll handlers for recommendation sliders
+  const recsContainerRef = useRef<HTMLDivElement>(null);
+  const recentContainerRef = useRef<HTMLDivElement>(null);
+
+  const scrollRecs = (direction: 'left' | 'right') => {
+    if (recsContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -350 : 350;
+      recsContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRecent = (direction: 'left' | 'right') => {
+    if (recentContainerRef.current) {
+      const scrollAmount = direction === 'left' ? -350 : 350;
+      recentContainerRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Fetch product & recommendations on mount / id change
   useEffect(() => {
     if (!id) return;
+    const numId = Number(id);
+
     setLoading(true);
     setFetchError(false);
     setActiveImageIndex(0);
     setQuantity(1);
+    // Reset recommendations when navigating to a different product
+    setRecommendations([]);
+    setRecentlyViewed([]);
+    setRecsLoading(false);
+    setRecentLoading(false);
 
-    getProductById(Number(id))
-      .then((data) => setProduct(data))
+    getProductById(numId)
+      .then((data) => {
+        setProduct(data);
+
+        // Fire-and-forget product view tracking (guarded against React strict mode duplicate calls)
+        if (trackedViewIdRef.current !== numId) {
+          trackedViewIdRef.current = numId;
+          let userId: number | null = null;
+          try {
+            const uStr = localStorage.getItem('tradehub_user');
+            if (uStr) userId = JSON.parse(uStr)?.id || null;
+          } catch { /* ignore parsing errors */ }
+          trackProductView(numId, userId);
+        }
+
+        // Fetch recommendations only after main product is confirmed to exist
+        setRecsLoading(true);
+        getRecommendations(numId)
+          .then((recs) => setRecommendations(recs))
+          .catch(() => setRecommendations([]))
+          .finally(() => setRecsLoading(false));
+
+        setRecentLoading(true);
+        getRecentlyViewed(numId)
+          .then((recent) => setRecentlyViewed(recent))
+          .catch(() => setRecentlyViewed([]))
+          .finally(() => setRecentLoading(false));
+      })
       .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
+
   }, [id]);
 
   // ── Derived values (safe even when product is null) ──────────────────────────
@@ -671,6 +743,211 @@ export const ProductDetail: React.FC = () => {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Recommendation Engine Sections ──────────────────────────── */}
+        <div className="mt-16 space-y-16">
+          {/* Section 1: "You Might Also Like" (Co-purchase & Category Fallback) */}
+          {(recsLoading || recommendations.length > 0) && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                      You Might Also Like
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Recommended based on frequent co-purchases &amp; category matches
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="hidden sm:inline-flex text-xs font-semibold px-3 py-1 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 mr-1">
+                    Curated Recommendations
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => scrollRecs('left')}
+                    aria-label="Scroll left"
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/30 text-slate-300 hover:text-white transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollRecs('right')}
+                    aria-label="Scroll right"
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-purple-500/30 text-slate-300 hover:text-white transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {recsLoading ? (
+                <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {[1, 2, 3, 4, 5, 6].map((idx) => (
+                    <div key={idx} className="w-48 sm:w-56 shrink-0 bg-[#0A0F1D] border border-slate-800/60 rounded-2xl p-4 space-y-3 animate-pulse">
+                      <div className="w-full h-36 bg-slate-800/60 rounded-xl" />
+                      <div className="h-4 bg-slate-800/60 rounded w-3/4" />
+                      <div className="h-3 bg-slate-800/40 rounded w-1/2" />
+                      <div className="h-5 bg-slate-800/60 rounded w-1/3 pt-2" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  ref={recsContainerRef}
+                  className="flex gap-4 overflow-x-auto pb-4 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {recommendations.map((item) => {
+                    const itemImg = resolveImage(item.image);
+                    return (
+                      <Link
+                        key={item.id}
+                        to={`/product/${item.id}`}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="w-48 sm:w-56 shrink-0 group bg-[#0E1524]/90 border border-slate-800/80 hover:border-purple-500/40 rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-purple-950/20"
+                      >
+                        <div className="space-y-3">
+                          <div className="relative w-full h-36 rounded-xl bg-slate-900 overflow-hidden border border-slate-800 flex items-center justify-center">
+                            <img
+                              src={itemImg}
+                              alt={item.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMAGE; }}
+                            />
+                            <div className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-slate-950/80 backdrop-blur-md border border-slate-700/50 text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
+                              {item.rating || 4.5}
+                            </div>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-semibold text-purple-400 uppercase tracking-wider block">
+                              {item.category || 'General'}
+                            </span>
+                            <h3 className="text-xs font-bold text-white group-hover:text-purple-300 transition-colors line-clamp-2 mt-0.5 leading-snug">
+                              {item.title}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 mt-3 border-t border-slate-800/60 flex items-center justify-between">
+                          <span className="text-sm font-extrabold text-white">
+                            {formatPrice(Number(item.price))}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400 group-hover:text-purple-300 transition-colors flex items-center gap-0.5">
+                            View <Eye className="w-3 h-3 ml-0.5" />
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Section 2: "Recently Viewed" (Distinct Session History, excluding current) */}
+          {(recentLoading || recentlyViewed.length > 0) && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
+                    <Clock className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                      Recently Viewed
+                    </h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Products you previously inspected in this session
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => scrollRecent('left')}
+                    aria-label="Scroll left"
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/30 text-slate-300 hover:text-white transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => scrollRecent('right')}
+                    aria-label="Scroll right"
+                    className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-blue-500/30 text-slate-300 hover:text-white transition-all cursor-pointer shadow-md active:scale-95 flex items-center justify-center"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {recentLoading ? (
+                <div className="flex gap-4 overflow-x-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  {[1, 2, 3, 4, 5, 6].map((idx) => (
+                    <div key={idx} className="w-48 sm:w-56 shrink-0 bg-[#0A0F1D] border border-slate-800/60 rounded-2xl p-4 space-y-3 animate-pulse">
+                      <div className="w-full h-36 bg-slate-800/60 rounded-xl" />
+                      <div className="h-4 bg-slate-800/60 rounded w-3/4" />
+                      <div className="h-3 bg-slate-800/40 rounded w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  ref={recentContainerRef}
+                  className="flex gap-4 overflow-x-auto pb-4 scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                >
+                  {recentlyViewed.map((item) => {
+                    const itemImg = resolveImage(item.image);
+                    return (
+                      <Link
+                        key={item.id}
+                        to={`/product/${item.id}`}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="w-48 sm:w-56 shrink-0 group bg-[#0E1524]/90 border border-slate-800/80 hover:border-blue-500/40 rounded-2xl p-3.5 flex flex-col justify-between transition-all duration-300 hover:shadow-xl hover:shadow-blue-950/20"
+                      >
+                        <div className="space-y-3">
+                          <div className="relative w-full h-36 rounded-xl bg-slate-900 overflow-hidden border border-slate-800 flex items-center justify-center">
+                            <img
+                              src={itemImg}
+                              alt={item.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              onError={(e) => { e.currentTarget.src = PLACEHOLDER_IMAGE; }}
+                            />
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wider block">
+                              {item.category || 'General'}
+                            </span>
+                            <h3 className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors line-clamp-2 mt-0.5 leading-snug">
+                              {item.title}
+                            </h3>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 mt-3 border-t border-slate-800/60 flex items-center justify-between">
+                          <span className="text-sm font-extrabold text-white">
+                            {formatPrice(Number(item.price))}
+                          </span>
+                          <span className="text-[10px] font-semibold text-slate-400 group-hover:text-blue-300 transition-colors flex items-center gap-0.5">
+                            Inspect <Eye className="w-3 h-3 ml-0.5" />
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -8,4 +8,5 @@ public class UserResponseDto
     public string Role { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public string Status { get; set; } = "Active";
+    public string? AvatarUrl { get; set; }
 }

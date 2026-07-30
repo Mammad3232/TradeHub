@@ -10,6 +10,7 @@ export interface ProfileData {
   location?: string;
   role: string;
   createdAt: string;
+  avatarUrl?: string;
 }
 
 export interface UpdateProfilePayload {
@@ -55,6 +56,15 @@ export const getMyProfile = (): Promise<ProfileData> =>
 
 export const updateMyProfile = (payload: UpdateProfilePayload): Promise<ProfileData> =>
   apiClient.put<never, ProfileData>('/account/profile', payload);
+
+export const uploadAvatar = (file: File): Promise<ProfileData> => {
+  const formData = new FormData();
+  formData.append('file', file);
+  return apiClient.post<never, ProfileData>('/account/avatar', formData);
+};
+
+export const deleteAvatar = (): Promise<ProfileData> =>
+  apiClient.delete<never, ProfileData>('/account/avatar');
 
 export const changePassword = (payload: ChangePasswordPayload): Promise<void> =>
   apiClient.post<never, void>('/account/change-password', payload);

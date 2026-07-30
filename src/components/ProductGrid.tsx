@@ -1087,16 +1087,18 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                         className="group relative bg-[#0B1120] border border-slate-800/80 rounded-2xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl"
                       >
                         {/* Image */}
-                        <div className="relative h-52 w-full overflow-hidden bg-slate-950 rounded-t-2xl">
-                          <img
-                            src={product.image}
-                            alt={product.title}
-                            className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
-                            loading="lazy"
-                            onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
-                          />
+                        <div className="relative h-52 w-full overflow-hidden bg-slate-950 rounded-t-2xl cursor-pointer">
+                          <Link to={`/product/${product.id}`} className="block w-full h-full">
+                            <img
+                              src={product.image}
+                              alt={product.title}
+                              className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
+                              loading="lazy"
+                              onError={(e) => { e.currentTarget.src = PLACEHOLDER; }}
+                            />
+                          </Link>
                           {/* Centered Quick View button overlay */}
-                          <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
                             <button
                               type="button"
                               onClick={(e) => {
@@ -1104,7 +1106,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                                 e.stopPropagation();
                                 setQuickViewProduct(product);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2.5 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                              className="pointer-events-auto inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2.5 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
                             >
                               <Eye className="h-3.5 w-3.5" />
                               {t('product.quickView')}

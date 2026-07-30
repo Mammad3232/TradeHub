@@ -124,6 +124,13 @@ export const Header: React.FC<HeaderProps> = ({
     .toUpperCase()
     .slice(0, 2) || 'ME';
 
+  const avatarSrc = (() => {
+    const raw = currentUser?.avatarUrl || currentUser?.logoUrl;
+    if (!raw) return undefined;
+    if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
+    return `http://localhost:5229${raw.startsWith('/') ? '' : '/'}${raw}`;
+  })();
+
   // ── Local UI state ───────────────────────────────────────────────────────
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -704,8 +711,8 @@ export const Header: React.FC<HeaderProps> = ({
                       aria-label="Open user menu"
                     >
                       <div className="w-8 h-8 rounded-full overflow-hidden shadow-md ring-2 ring-purple-500/20 group-hover:ring-purple-500/40 transition-all flex-shrink-0 flex items-center justify-center bg-slate-800">
-                        {currentUser?.logoUrl || currentUser?.avatarUrl ? (
-                          <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                        {avatarSrc ? (
+                          <img src={avatarSrc} alt="User logo" className="object-cover w-full h-full rounded-full" />
                         ) : (
                           <span className="text-[11px] font-black text-white">{initials}</span>
                         )}
@@ -722,8 +729,8 @@ export const Header: React.FC<HeaderProps> = ({
                       <div className="absolute right-0 top-12 w-56 bg-[#0E1524] border border-slate-800 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                         <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-slate-800 flex-shrink-0">
-                            {currentUser?.logoUrl || currentUser?.avatarUrl ? (
-                              <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                            {avatarSrc ? (
+                              <img src={avatarSrc} alt="User logo" className="object-cover w-full h-full rounded-full" />
                             ) : (
                               <span className="text-xs font-black text-white">{initials}</span>
                             )}
@@ -817,8 +824,8 @@ export const Header: React.FC<HeaderProps> = ({
                       <>
                         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 mb-2">
                           <div className="w-9 h-9 rounded-full overflow-hidden flex items-center justify-center bg-slate-800 flex-shrink-0">
-                            {currentUser?.logoUrl || currentUser?.avatarUrl ? (
-                              <img src={currentUser.logoUrl || currentUser.avatarUrl} alt="User logo" className="object-cover w-full h-full rounded-full" />
+                            {avatarSrc ? (
+                              <img src={avatarSrc} alt="User logo" className="object-cover w-full h-full rounded-full" />
                             ) : (
                               <span className="text-xs font-black text-white">{initials}</span>
                             )}

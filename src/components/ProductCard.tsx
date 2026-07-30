@@ -106,16 +106,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
     <article className="group relative bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col hover:border-slate-700 hover:shadow-2xl hover:shadow-indigo-500/10 transition-all duration-300">
 
       {/* ── Image Section ──────────────────────────────────────────── */}
-      <div className="relative overflow-hidden bg-slate-950 h-56 w-full rounded-t-2xl">
-        <img
-          src={imgSrc}
-          alt={product.title}
-          className="w-full h-full object-cover object-center rounded-t-2xl transition-transform duration-500 group-hover:scale-105"
-          onError={() => setImgSrc(PLACEHOLDER)}
-        />
+      <div className="relative overflow-hidden bg-slate-950 h-56 w-full rounded-t-2xl cursor-pointer">
+        <Link to={`/product/${product.id}`} className="block w-full h-full">
+          <img
+            src={imgSrc}
+            alt={product.title}
+            className="w-full h-full object-cover object-center rounded-t-2xl transition-transform duration-500 group-hover:scale-105"
+            onError={() => setImgSrc(PLACEHOLDER)}
+          />
+        </Link>
 
         {/* Overlay actions (appear on hover) with centered Quick View button */}
-        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+        <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center pointer-events-none">
           <button
             type="button"
             onClick={(e) => {
@@ -123,7 +125,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               e.stopPropagation();
               setIsQuickViewOpen(true);
             }}
-            className="inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className="pointer-events-auto inline-flex items-center gap-1.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold px-4.5 py-2 rounded-xl shadow-lg shadow-purple-600/30 hover:scale-105 active:scale-95 transition-all cursor-pointer"
           >
             <Eye className="h-3.5 w-3.5" />
             {t('product.quickView')}
@@ -140,7 +142,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </button>
 
         {/* Category badge */}
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-3 left-3 z-10 pointer-events-none">
           <span className="bg-slate-900/80 backdrop-blur-sm text-xs font-semibold px-2.5 py-1 rounded-full text-indigo-400 border border-indigo-500/20">
             {product.category}
           </span>

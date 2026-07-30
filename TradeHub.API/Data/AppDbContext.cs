@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Address> Addresses => Set<Address>();
+    public DbSet<ProductView> ProductViews => Set<ProductView>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -33,6 +34,7 @@ public class AppDbContext : DbContext
             entity.Property(u => u.Role).HasConversion<string>();
             entity.Property(u => u.PhoneNumber).HasMaxLength(30).IsRequired(false);
             entity.Property(u => u.Location).HasMaxLength(200).IsRequired(false);
+            entity.Property(u => u.AvatarUrl).HasMaxLength(500).IsRequired(false);
         });
 
         // Address Configuration
@@ -145,6 +147,12 @@ public class AppDbContext : DbContext
                   .WithMany(p => p.OrderItems)
                   .HasForeignKey(oi => oi.ProductId)
                   .OnDelete(DeleteBehavior.Restrict);
+
+            // Composite index for co-purchase recommendation query performance.
+            // The query: "find all other products that share an OrderId with this ProductId"
+            // hits this index directly — critical for scalability as orders grow.
+            entity.HasIndex(oi => new { oi.ProductId, oi.OrderId })
+                  .HasDatabaseName("IX_OrderItems_ProductId_OrderId");
         });
 
         // Review Configuration
@@ -188,6 +196,37 @@ public class AppDbContext : DbContext
             entity.HasOne(n => n.RelatedProduct)
                   .WithMany(p => p.Notifications)
                   .HasForeignKey(n => n.RelatedProductId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ProductView Configuration
+        modelBuilder.Entity<ProductView>(entity =>
+        {
+            entity.HasKey(pv => pv.Id);
+
+            entity.Property(pv => pv.SessionId)
+                  .IsRequired()
+                  .HasMaxLength(100);
+
+            // Index on SessionId — drives GET /api/products/recently-viewed?sessionId=...
+            entity.HasIndex(pv => pv.SessionId)
+                  .HasDatabaseName("IX_ProductViews_SessionId");
+
+            // Index on ProductId — could be used for view-count analytics
+            entity.HasIndex(pv => pv.ProductId)
+                  .HasDatabaseName("IX_ProductViews_ProductId");
+
+            // FK: ProductView → Product (cascade delete — if product is removed, views go too)
+            entity.HasOne(pv => pv.Product)
+                  .WithMany()
+                  .HasForeignKey(pv => pv.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // FK: ProductView → User (set null — views survive if user account is deleted)
+            entity.HasOne(pv => pv.User)
+                  .WithMany()
+                  .HasForeignKey(pv => pv.UserId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.SetNull);
         });

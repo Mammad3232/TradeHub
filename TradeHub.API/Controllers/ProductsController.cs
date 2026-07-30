@@ -1,7 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using TradeHub.API.Data;
 using TradeHub.API.DTOs;
 using TradeHub.API.DTOs.Products;
+using TradeHub.API.Models;
 using TradeHub.API.Services.Interfaces;
 
 namespace TradeHub.API.Controllers;
@@ -12,10 +16,17 @@ namespace TradeHub.API.Controllers;
 public class ProductsController : ControllerBase
 {
     private readonly IProductService _productService;
+    private readonly IRecommendationService _recommendationService;
+    private readonly IServiceScopeFactory _scopeFactory;
 
-    public ProductsController(IProductService productService)
+    public ProductsController(
+        IProductService productService,
+        IRecommendationService recommendationService,
+        IServiceScopeFactory scopeFactory)
     {
         _productService = productService;
+        _recommendationService = recommendationService;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -115,5 +126,81 @@ public class ProductsController : ControllerBase
     {
         await _productService.DeleteAsync(id);
         return Ok(ApiResponse.Ok("Product deleted successfully."));
+    }
+
+    // ── Tracking & Recommendations ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Record a product-detail page view. Fire-and-forget — returns 202 immediately
+    /// so a DB slowdown never blocks the user's page render.
+    /// Called once when the Product Detail page mounts in the frontend.
+    /// </summary>
+    [HttpPost("{id:int}/view")]
+    [ProducesResponseType(StatusCodes.Status202Accepted)]
+    public IActionResult TrackView(int id, [FromBody] TrackViewDto dto)
+    {
+        // Fire-and-forget: kick off DB write without awaiting so the response returns
+        // immediately (202 Accepted) without blocking the user's page render.
+        //
+        // IMPORTANT: We create a fresh DI scope inside the Task.Run lambda.
+        // Capturing the controller's scoped _db directly would cause a
+        // "DbContext was disposed" exception because the HTTP request scope ends
+        // as soon as we return Accepted() below.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = _scopeFactory.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+                // Silently skip if product doesn't exist (avoids FK violation)
+                var productExists = await db.Products.AnyAsync(p => p.Id == id && p.IsActive);
+                if (!productExists) return;
+
+                var view = new ProductView
+                {
+                    ProductId = id,
+                    SessionId = dto.SessionId,
+                    UserId    = dto.UserId,
+                    ViewedAt  = DateTime.UtcNow,
+                };
+
+                db.ProductViews.Add(view);
+                await db.SaveChangesAsync();
+            }
+            catch
+            {
+                // Silently swallow — view tracking must never crash the user experience.
+            }
+        });
+
+        return Accepted();
+    }
+
+    /// <summary>
+    /// Get products frequently co-purchased with the target product, falling back to same-category products.
+    /// </summary>
+    [HttpGet("{id:int}/recommendations")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRecommendations(int id)
+    {
+        var recommendations = await _recommendationService.GetRecommendationsAsync(id);
+        return Ok(ApiResponse<IEnumerable<ProductResponseDto>>.Ok(recommendations));
+    }
+
+    /// <summary>
+    /// Get recently viewed products for the current session/user, excluding the current product if requested.
+    /// </summary>
+    [HttpGet("recently-viewed")]
+    [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductResponseDto>>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRecentlyViewed([FromQuery] string sessionId, [FromQuery] int? excludeProductId = null)
+    {
+        if (string.IsNullOrWhiteSpace(sessionId))
+        {
+            return Ok(ApiResponse<IEnumerable<ProductResponseDto>>.Ok(Enumerable.Empty<ProductResponseDto>()));
+        }
+
+        var recentlyViewed = await _recommendationService.GetRecentlyViewedAsync(sessionId, excludeProductId);
+        return Ok(ApiResponse<IEnumerable<ProductResponseDto>>.Ok(recentlyViewed));
     }
 }

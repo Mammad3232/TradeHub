@@ -126,3 +126,50 @@ export const getImageUrl = (imagePath?: string): string => {
   }
   return `http://localhost:5229${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;
 };
+
+// ── Session GUID Helper for Guest / User View Tracking ─────────────────────────
+export const getSessionId = (): string => {
+  let sessionId = localStorage.getItem("tradehub_session_id");
+  if (!sessionId) {
+    sessionId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : 'session-' + Math.random().toString(36).substring(2, 11) + '-' + Date.now();
+    localStorage.setItem("tradehub_session_id", sessionId);
+  }
+  return sessionId;
+};
+
+// ── Tracking & Recommendation Services ───────────────────────────────────────
+export const trackProductView = async (productId: number, userId?: number | null): Promise<void> => {
+  try {
+    const sessionId = getSessionId();
+    // Fire-and-forget — does not throw or block UI
+    await apiClient.post(`/products/${productId}/view`, {
+      sessionId,
+      userId: userId || null
+    });
+  } catch (error) {
+    // Silently ignore tracking errors to avoid disrupting user experience
+    console.debug('Failed to record product view:', error);
+  }
+};
+
+export const getRecommendations = async (productId: number): Promise<Product[]> => {
+  try {
+    return await apiClient.get<never, Product[]>(`/products/${productId}/recommendations`);
+  } catch (error) {
+    console.error('Failed to fetch product recommendations:', error);
+    return [];
+  }
+};
+
+export const getRecentlyViewed = async (excludeProductId?: number): Promise<Product[]> => {
+  try {
+    const sessionId = getSessionId();
+    const excludeParam = excludeProductId ? `&excludeProductId=${excludeProductId}` : '';
+    return await apiClient.get<never, Product[]>(`/products/recently-viewed?sessionId=${encodeURIComponent(sessionId)}${excludeParam}`);
+  } catch (error) {
+    console.error('Failed to fetch recently viewed products:', error);
+    return [];
+  }
+};

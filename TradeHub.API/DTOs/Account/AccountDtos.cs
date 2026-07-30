@@ -12,6 +12,7 @@ public class ProfileDto
     public string? Location { get; set; }
     public string Role { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public string? AvatarUrl { get; set; }
 }
 
 /// <summary>Payload for PUT /api/account/profile.</summary>

@@ -51,7 +51,8 @@ public class AccountController : ControllerBase
             PhoneNumber = user.PhoneNumber,
             Location    = user.Location,
             Role        = user.Role.ToString(),
-            CreatedAt   = user.CreatedAt
+            CreatedAt   = user.CreatedAt,
+            AvatarUrl   = user.AvatarUrl
         }));
     }
 
@@ -83,8 +84,86 @@ public class AccountController : ControllerBase
             PhoneNumber = user.PhoneNumber,
             Location    = user.Location,
             Role        = user.Role.ToString(),
-            CreatedAt   = user.CreatedAt
+            CreatedAt   = user.CreatedAt,
+            AvatarUrl   = user.AvatarUrl
         }, "Profile updated successfully."));
+    }
+
+    // ── POST /api/account/avatar ────────────────────────────────────────────────
+    /// <summary>Upload and update user profile picture.</summary>
+    [HttpPost("avatar")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadAvatar(IFormFile file, [FromServices] IWebHostEnvironment env)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(ApiResponse.Fail("Please select an image file to upload."));
+
+        const long maxFileSize = 5 * 1024 * 1024; // 5 MB
+        if (file.Length > maxFileSize)
+            return BadRequest(ApiResponse.Fail("Avatar file size cannot exceed 5MB."));
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(ApiResponse.Fail("Invalid image format. Allowed formats: .jpg, .jpeg, .png, .webp"));
+
+        var userId = CurrentUserId();
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound(ApiResponse.Fail("User not found."));
+
+        var uploadsFolder = Path.Combine(env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "avatars");
+        if (!Directory.Exists(uploadsFolder))
+        {
+            Directory.CreateDirectory(uploadsFolder);
+        }
+
+        var uniqueFileName = $"user_{userId}_{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        using (var stream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        user.AvatarUrl = $"/uploads/avatars/{uniqueFileName}";
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<ProfileDto>.Ok(new ProfileDto
+        {
+            Id          = user.Id,
+            FullName    = user.FullName,
+            Email       = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Location    = user.Location,
+            Role        = user.Role.ToString(),
+            CreatedAt   = user.CreatedAt,
+            AvatarUrl   = user.AvatarUrl
+        }, "Profile picture updated successfully."));
+    }
+
+    // ── DELETE /api/account/avatar ─────────────────────────────────────────────
+    /// <summary>Remove user profile picture (reverts to default initials).</summary>
+    [HttpDelete("avatar")]
+    public async Task<IActionResult> DeleteAvatar()
+    {
+        var userId = CurrentUserId();
+        var user = await _db.Users.FindAsync(userId);
+        if (user is null) return NotFound(ApiResponse.Fail("User not found."));
+
+        user.AvatarUrl = null;
+        await _db.SaveChangesAsync();
+
+        return Ok(ApiResponse<ProfileDto>.Ok(new ProfileDto
+        {
+            Id          = user.Id,
+            FullName    = user.FullName,
+            Email       = user.Email,
+            PhoneNumber = user.PhoneNumber,
+            Location    = user.Location,
+            Role        = user.Role.ToString(),
+            CreatedAt   = user.CreatedAt,
+            AvatarUrl   = null
+        }, "Profile picture removed successfully."));
     }
 
     // ── POST /api/account/change-password ────────────────────────────────────────

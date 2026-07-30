@@ -32,6 +32,7 @@ builder.Services.AddScoped<IBrandService, BrandService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IStockAlertService, StockAlertService>();
+builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 
 // ── AI Chat Proxy Services ───────────────────────────────────────────────────
 // HttpClient factory — the Groq client gets its base configuration here.
@@ -186,6 +187,14 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        try
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Users]') AND name = 'AvatarUrl') " +
+                "ALTER TABLE [Users] ADD [AvatarUrl] nvarchar(500) NULL;");
+        }
+        catch { /* ignore if already exists or sqlite/in-memory */ }
+
         var products = await db.Products.ToListAsync();
         bool changed = false;
         foreach (var p in products)

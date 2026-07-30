@@ -19,6 +19,7 @@ public class User
     // Optional profile fields
     public string? PhoneNumber { get; set; }
     public string? Location { get; set; }
+    public string? AvatarUrl { get; set; }
 
     // Navigation properties
     public ICollection<Order> Orders { get; set; } = new List<Order>();
