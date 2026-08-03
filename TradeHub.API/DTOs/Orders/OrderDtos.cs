@@ -20,7 +20,7 @@ public class OrderItemDto
     public int ProductId { get; set; }
 
     [Required]
-    [Range(1, 100, ErrorMessage = "Quantity must be between 1 and 100.")]
+    [Range(1, 9999, ErrorMessage = "Quantity must be between 1 and 9,999.")]
     public int Quantity { get; set; }
 }
 

@@ -64,7 +64,31 @@ export interface LiveUserActivityToast {
   createdAt: string;
 }
 
-export type LiveToastItem = LiveOrderToast | LiveLowStockToast | LiveUserActivityToast;
+export type LiveToastItem = LiveOrderToast | LiveLowStockToast | LiveUserActivityToast | LivePriceDropToast;
+
+// PriceDrop: customer-facing toast triggered by PriceAlertJob via SignalR
+export interface PriceDropEventData {
+  notificationId: number;
+  wishlistItemId: number;
+  productId: number;
+  productName: string;
+  imageUrl: string;
+  oldPrice: number;
+  newPrice: number;
+  message: string;
+  createdAt: string;
+}
+
+export interface LivePriceDropToast {
+  id: string;
+  type: 'PriceDrop';
+  productId: number;
+  productName: string;
+  oldPrice: number;
+  newPrice: number;
+  message: string;
+  createdAt: string;
+}
 
 export interface RoleUpdatedEventData {
   userId: number;
@@ -356,6 +380,30 @@ export const NotificationProvider: React.FC<{
         }, 5000); // 5 saniyə sonra ekrandan silinsin
       });
     }
+
+    // ── PriceDrop listener: fires for ALL logged-in customers (not just Admins) ──
+    connection.on('PriceDropAlert', (data: PriceDropEventData) => {
+      if (!isMounted) return;
+      const toastId = `pricedrop-${data.productId}-${Date.now()}`;
+
+      setLiveToasts((prev) => [
+        {
+          id: toastId,
+          type: 'PriceDrop',
+          productId: data.productId,
+          productName: data.productName,
+          oldPrice: data.oldPrice,
+          newPrice: data.newPrice,
+          message: data.message,
+          createdAt: data.createdAt,
+        } as LivePriceDropToast,
+        ...prev,
+      ]);
+
+      setTimeout(() => {
+        if (isMounted) setLiveToasts((prev) => prev.filter((t) => t.id !== toastId));
+      }, 10000); // Price drop toasts stay 10 seconds so user can see the details
+    });
 
     connection.on('RoleUpdated', (data: RoleUpdatedEventData) => {
       if (!isMounted) return;

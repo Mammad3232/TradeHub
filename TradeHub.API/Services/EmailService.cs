@@ -190,4 +190,99 @@ public class EmailService : IEmailService
         </html>
         """;
     }
+
+    // ── Price Drop Email ──────────────────────────────────────────────────────────
+
+    public async Task SendPriceDropEmailAsync(
+        string toEmail,
+        string toName,
+        string productName,
+        decimal oldPrice,
+        decimal newPrice)
+    {
+        var subject = $"🎉 Price Drop Alert! {productName} is now ${newPrice:F2}!";
+        var htmlBody = BuildPriceDropHtml(toName, productName, oldPrice, newPrice);
+        await SendAsync(toEmail, toName, subject, htmlBody);
+    }
+
+    private static string BuildPriceDropHtml(
+        string customerName,
+        string productName,
+        decimal oldPrice,
+        decimal newPrice)
+    {
+        var savings = oldPrice - newPrice;
+
+        return $"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8"/>
+          <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+          <title>Price Drop Alert</title>
+        </head>
+        <body style="margin:0; padding:0; background-color:#0f172a; font-family:'Segoe UI', Arial, sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a; padding:40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color:#1e293b; border-radius:16px; overflow:hidden; border:1px solid #334155;">
+
+                  <!-- Header -->
+                  <tr>
+                    <td style="background: linear-gradient(135deg, #10b981, #059669); padding:36px 40px; text-align:center;">
+                      <h1 style="margin:0; color:#ffffff; font-size:28px; font-weight:800; letter-spacing:-0.5px;">🎉 Price Drop Alert!</h1>
+                      <p style="margin:8px 0 0; color:#a7f3d0; font-size:15px;">An item on your wishlist just dropped in price!</p>
+                    </td>
+                  </tr>
+
+                  <!-- Greeting & Product -->
+                  <tr>
+                    <td style="padding:32px 40px 0;">
+                      <h2 style="margin:0 0 8px; color:#f8fafc; font-size:20px;">Hi, {customerName}! 👋</h2>
+                      <p style="margin:0 0 20px; color:#94a3b8; font-size:15px; line-height:1.6;">
+                        Great news! A product you saved to your wishlist is now available at a lower price:
+                      </p>
+                      <h3 style="margin:0 0 16px; color:#34d399; font-size:22px; font-weight:700;">{productName}</h3>
+                    </td>
+                  </tr>
+
+                  <!-- Price Badge -->
+                  <tr>
+                    <td style="padding:0 40px 32px;">
+                      <div style="background-color:#0f172a; border-radius:12px; padding:20px 24px; border:1px solid #10b98144;">
+                        <table width="100%" cellpadding="0" cellspacing="0">
+                          <tr>
+                            <td style="color:#94a3b8; font-size:14px;">Previous Price:</td>
+                            <td style="color:#94a3b8; font-size:16px; text-decoration:line-through; text-align:right;">${oldPrice:F2}</td>
+                          </tr>
+                          <tr>
+                            <td style="color:#34d399; font-size:18px; font-weight:800; padding-top:8px;">New Low Price:</td>
+                            <td style="color:#34d399; font-size:26px; font-weight:900; text-align:right; padding-top:8px;">${newPrice:F2}</td>
+                          </tr>
+                          <tr>
+                            <td colspan="2" style="padding-top:12px; border-top:1px solid #334155; text-align:center; color:#a7f3d0; font-weight:700; font-size:14px;">
+                              🔥 You save ${savings:F2}!
+                            </td>
+                          </tr>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- CTA Footer -->
+                  <tr>
+                    <td style="background-color:#0f172a; padding:24px 40px; text-align:center; border-top:1px solid #1e293b;">
+                      <p style="margin:0 0 8px; color:#475569; font-size:13px;">Visit <a href="http://localhost:5173/wishlist" style="color:#10b981; text-decoration:none; font-weight:700;">TradeHub Wishlist</a> to grab it before stock runs out!</p>
+                      <p style="margin:0; color:#334155; font-size:12px;">© 2026 TradeHub. All rights reserved.</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+        """;
+    }
 }

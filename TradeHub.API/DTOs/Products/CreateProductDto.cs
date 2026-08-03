@@ -15,6 +15,9 @@ public class CreateProductDto
     [Range(0.01, 999999.99, ErrorMessage = "Price must be greater than zero.")]
     public decimal Price { get; set; }
 
+    [Range(0.01, 999999.99, ErrorMessage = "Old price must be greater than zero.")]
+    public decimal? OldPrice { get; set; }
+
     [Required]
     [Range(0, int.MaxValue, ErrorMessage = "Stock quantity cannot be negative.")]
     public int StockQuantity { get; set; }

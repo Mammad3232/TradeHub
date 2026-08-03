@@ -9,6 +9,7 @@ public class ProductResponseDto
     public string Title { get; set; } = string.Empty;       // maps from Product.Name
     public string Description { get; set; } = string.Empty;
     public decimal Price { get; set; }
+    public decimal? OldPrice { get; set; }
     public int StockQuantity { get; set; }
     public string Image { get; set; } = string.Empty;       // maps from Product.ImageUrl
     public int CategoryId { get; set; }

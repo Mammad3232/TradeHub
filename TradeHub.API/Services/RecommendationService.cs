@@ -114,16 +114,20 @@ public class RecommendationService : IRecommendationService
             return Enumerable.Empty<ProductResponseDto>();
         }
 
-        // Fetch distinct recently viewed product IDs for this session ordered by most recent view
+        // Fetch distinct recently viewed product IDs for this session ordered by most recent view.
+        // NOTE: .Distinct() after .OrderByDescending() is NOT safe — SQL Server drops ORDER BY
+        // when DISTINCT is applied, producing arbitrary ordering.
+        // Instead, group by ProductId and take the MAX ViewedAt per product, then order by that.
         var recentProductIds = await _db.ProductViews
             .AsNoTracking()
             .Where(pv => pv.SessionId == sessionId
                          && (!excludeProductId.HasValue || pv.ProductId != excludeProductId.Value)
                          && pv.Product.IsActive)
-            .OrderByDescending(pv => pv.ViewedAt)
-            .Select(pv => pv.ProductId)
-            .Distinct()
+            .GroupBy(pv => pv.ProductId)
+            .Select(g => new { ProductId = g.Key, LastViewedAt = g.Max(pv => pv.ViewedAt) })
+            .OrderByDescending(g => g.LastViewedAt)
             .Take(8)
+            .Select(g => g.ProductId)
             .ToListAsync();
 
         if (recentProductIds.Count == 0)
@@ -140,7 +144,7 @@ public class RecommendationService : IRecommendationService
             .Where(p => recentProductIds.Contains(p.Id))
             .ToListAsync();
 
-        // Preserve viewed ordering
+        // Re-apply the most-recent-first ordering (the second query loses ORDER BY since it uses Contains).
         var orderedProducts = new List<Product>();
         foreach (var pId in recentProductIds)
         {

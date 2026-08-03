@@ -116,6 +116,7 @@ public class ProductService : IProductService
             Name = dto.Name.Trim(),
             Description = dto.Description?.Trim() ?? string.Empty,
             Price = dto.Price,
+            OldPrice = dto.OldPrice,
             StockQuantity = dto.StockQuantity,
             ImageUrl = imageUrl,
             CategoryId = dto.CategoryId,
@@ -141,6 +142,7 @@ public class ProductService : IProductService
         if (dto.Name is not null)         product.Name = dto.Name.Trim();
         if (dto.Description is not null)  product.Description = dto.Description.Trim();
         if (dto.Price.HasValue)           product.Price = dto.Price.Value;
+        if (dto.OldPrice.HasValue)        product.OldPrice = dto.OldPrice.Value;
         if (dto.StockQuantity.HasValue)   product.StockQuantity = dto.StockQuantity.Value;
         if (dto.ImageUrl is not null)     product.ImageUrl = dto.ImageUrl.Trim();
         if (dto.IsActive.HasValue)        product.IsActive = dto.IsActive.Value;
@@ -193,6 +195,7 @@ public class ProductService : IProductService
         Title = p.Name,
         Description = p.Description,
         Price = p.Price,
+        OldPrice = p.OldPrice,
         StockQuantity = p.StockQuantity,
         Image = p.ImageUrl,
         CategoryId = p.CategoryId,

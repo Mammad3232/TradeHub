@@ -292,6 +292,9 @@ namespace TradeHub.API.Migrations
                     b.Property<int?>("RelatedProductId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RelatedWishlistItemId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -299,11 +302,18 @@ namespace TradeHub.API.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("NewOrder");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("RelatedOrderId");
 
                     b.HasIndex("RelatedProductId");
+
+                    b.HasIndex("RelatedWishlistItemId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Notifications");
                 });
@@ -584,6 +594,34 @@ namespace TradeHub.API.Migrations
                             Quantity = 1,
                             UnitPrice = 249.50m
                         });
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.PriceAlert", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("PriceAtAlert")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("WishlistItemId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WishlistItemId")
+                        .HasDatabaseName("IX_PriceAlerts_WishlistItemId");
+
+                    b.ToTable("PriceAlerts");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Product", b =>
@@ -2074,6 +2112,37 @@ namespace TradeHub.API.Migrations
                         });
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.WishlistItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("PriceWhenAdded")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("UserId", "ProductId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_WishlistItems_UserId_ProductId");
+
+                    b.ToTable("WishlistItems");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Address", b =>
                 {
                     b.HasOne("TradeHub.API.Models.User", "User")
@@ -2097,9 +2166,23 @@ namespace TradeHub.API.Migrations
                         .HasForeignKey("RelatedProductId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("TradeHub.API.Models.WishlistItem", "RelatedWishlistItem")
+                        .WithMany()
+                        .HasForeignKey("RelatedWishlistItemId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("TradeHub.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.Navigation("RelatedOrder");
 
                     b.Navigation("RelatedProduct");
+
+                    b.Navigation("RelatedWishlistItem");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Order", b =>
@@ -2130,6 +2213,17 @@ namespace TradeHub.API.Migrations
                     b.Navigation("Order");
 
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.PriceAlert", b =>
+                {
+                    b.HasOne("TradeHub.API.Models.WishlistItem", "WishlistItem")
+                        .WithMany("PriceAlerts")
+                        .HasForeignKey("WishlistItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WishlistItem");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Product", b =>
@@ -2205,6 +2299,25 @@ namespace TradeHub.API.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("TradeHub.API.Models.WishlistItem", b =>
+                {
+                    b.HasOne("TradeHub.API.Models.Product", "Product")
+                        .WithMany("WishlistItems")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TradeHub.API.Models.User", "User")
+                        .WithMany("WishlistItems")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("TradeHub.API.Models.Brand", b =>
                 {
                     b.Navigation("Products");
@@ -2229,6 +2342,8 @@ namespace TradeHub.API.Migrations
                     b.Navigation("OrderItems");
 
                     b.Navigation("Reviews");
+
+                    b.Navigation("WishlistItems");
                 });
 
             modelBuilder.Entity("TradeHub.API.Models.Subcategory", b =>
@@ -2243,6 +2358,13 @@ namespace TradeHub.API.Migrations
                     b.Navigation("Orders");
 
                     b.Navigation("Reviews");
+
+                    b.Navigation("WishlistItems");
+                });
+
+            modelBuilder.Entity("TradeHub.API.Models.WishlistItem", b =>
+                {
+                    b.Navigation("PriceAlerts");
                 });
 #pragma warning restore 612, 618
         }

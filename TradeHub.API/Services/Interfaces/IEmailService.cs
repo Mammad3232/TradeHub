@@ -23,4 +23,14 @@ public interface IEmailService
         int orderId,
         decimal totalPrice,
         IEnumerable<(string ProductName, int Quantity, decimal UnitPrice)> items);
+
+    /// <summary>
+    /// Sends a price drop notification email to the customer when a wishlisted product price decreases.
+    /// </summary>
+    Task SendPriceDropEmailAsync(
+        string toEmail,
+        string toName,
+        string productName,
+        decimal oldPrice,
+        decimal newPrice);
 }

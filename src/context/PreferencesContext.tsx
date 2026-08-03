@@ -105,7 +105,11 @@ export const PreferencesProvider: React.FC<{ children: React.ReactNode }> = ({ c
     (amountInUSD: number): string => {
       const config = CURRENCY_CONFIG[currency] || CURRENCY_CONFIG.USD;
       const converted = convertPrice(amountInUSD);
-      const formattedNum = converted.toFixed(2);
+      const safeVal = Number.isFinite(converted) ? converted : 0;
+      const formattedNum = safeVal.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
       return config.prefix ? `${config.symbol}${formattedNum}` : `${formattedNum} ${config.symbol}`;
     },
     [currency, convertPrice]

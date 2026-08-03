@@ -27,6 +27,7 @@ export interface ProductCardItem {
   subcategorySlug?: string | null;
   brandId?: number | null;
   price: number;
+  oldPrice?: number | null;
   rating: number;
   image: string;
   badge?: "Sale" | "New" | "Hot" | null;

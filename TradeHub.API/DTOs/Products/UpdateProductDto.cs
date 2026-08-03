@@ -13,6 +13,9 @@ public class UpdateProductDto
     [Range(0.01, 999999.99)]
     public decimal? Price { get; set; }
 
+    [Range(0.01, 999999.99)]
+    public decimal? OldPrice { get; set; }
+
     [Range(0, int.MaxValue)]
     public int? StockQuantity { get; set; }
 

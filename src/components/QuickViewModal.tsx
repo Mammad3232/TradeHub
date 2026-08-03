@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Star, ShoppingCart, Minus, Plus, Loader2, ArrowRight, Store } from 'lucide-react';
+import { X, Star, ShoppingCart, Minus, Plus, Loader2, ArrowRight, Store, Sparkles } from 'lucide-react';
 import { useShop } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ interface QuickViewModalProps {
     title: string;
     brand?: string | null;
     price: number;
+    oldPrice?: number | null;
     image: string;
     rating: number;
     category?: string;
@@ -143,6 +144,12 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen,
   const stockQuantity = detailProduct?.stockQuantity ?? displayProduct.stockQuantity ?? (displayProduct as any).stock ?? 50;
   const isOutOfStock = stockQuantity <= 0;
 
+  const oldPrice = displayProduct.oldPrice;
+  const hasDiscount = Boolean(oldPrice && Number(oldPrice) > Number(price));
+  const discountPercent = hasDiscount && oldPrice
+    ? Math.round(((Number(oldPrice) - Number(price)) / Number(oldPrice)) * 100)
+    : null;
+
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {
       onClose();
@@ -259,8 +266,22 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen,
               </div>
 
               {/* Price */}
-              <div className="text-2xl md:text-3xl font-extrabold text-purple-400">
-                {formatPrice(price)}
+              <div className="flex items-center gap-3">
+                <div className="text-2xl md:text-3xl font-extrabold text-purple-400">
+                  {formatPrice(price)}
+                </div>
+                {hasDiscount && oldPrice && (
+                  <>
+                    <span className="text-sm font-semibold text-slate-500 line-through">
+                      {formatPrice(Number(oldPrice))}
+                    </span>
+                    {discountPercent !== null && discountPercent > 0 && (
+                      <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2 py-0.5 rounded-lg border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> Save {discountPercent}%
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Description */}

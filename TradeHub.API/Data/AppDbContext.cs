@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<Address> Addresses => Set<Address>();
     public DbSet<ProductView> ProductViews => Set<ProductView>();
+    public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
+    public DbSet<PriceAlert> PriceAlerts => Set<PriceAlert>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -93,6 +95,7 @@ public class AppDbContext : DbContext
             entity.Property(p => p.Name).IsRequired().HasMaxLength(300);
             entity.Property(p => p.Description).HasMaxLength(2000);
             entity.Property(p => p.Price).HasColumnType("decimal(18,2)");
+            entity.Property(p => p.OldPrice).HasColumnType("decimal(18,2)").IsRequired(false);
             entity.Property(p => p.ImageUrl).HasMaxLength(500);
 
             // Nullable — null / 0 means "no threshold configured"
@@ -191,13 +194,25 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.SetNull);
 
             // CRITICAL: Notifications survive even if the related product is deleted (SetNull)
-            // Without this, deleting a product that has LowStock notifications would throw a
-            // FK constraint violation.
             entity.HasOne(n => n.RelatedProduct)
                   .WithMany(p => p.Notifications)
                   .HasForeignKey(n => n.RelatedProductId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.SetNull);
+
+            // PriceDrop notifications survive if the wishlist item is later removed (NoAction to prevent SQL Server multiple cascade paths)
+            entity.HasOne(n => n.RelatedWishlistItem)
+                  .WithMany()
+                  .HasForeignKey(n => n.RelatedWishlistItemId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.NoAction);
+
+            // Per-customer notifications: survive user deletion (NoAction to prevent SQL Server multiple cascade paths)
+            entity.HasOne(n => n.User)
+                  .WithMany()
+                  .HasForeignKey(n => n.UserId)
+                  .IsRequired(false)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
 
         // ProductView Configuration
@@ -229,6 +244,51 @@ public class AppDbContext : DbContext
                   .HasForeignKey(pv => pv.UserId)
                   .IsRequired(false)
                   .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // WishlistItem Configuration
+        modelBuilder.Entity<WishlistItem>(entity =>
+        {
+            entity.HasKey(wi => wi.Id);
+            entity.Property(wi => wi.PriceWhenAdded).HasColumnType("decimal(18,2)");
+
+            // CRITICAL: Cascade delete on ProductId.
+            // If an admin hard-deletes a product, all wishlist rows referencing it
+            // are automatically removed — no orphan data, no FK constraint violation.
+            entity.HasOne(wi => wi.Product)
+                  .WithMany(p => p.WishlistItems)
+                  .HasForeignKey(wi => wi.ProductId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Cascade delete on UserId.
+            // Deleting a user removes all their wishlist entries cleanly.
+            entity.HasOne(wi => wi.User)
+                  .WithMany(u => u.WishlistItems)
+                  .HasForeignKey(wi => wi.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // DB-level unique constraint: a user can only add a product once.
+            // This backs up the application-level duplicate check with a safety net.
+            entity.HasIndex(wi => new { wi.UserId, wi.ProductId })
+                  .IsUnique()
+                  .HasDatabaseName("IX_WishlistItems_UserId_ProductId");
+        });
+
+        // PriceAlert Configuration
+        modelBuilder.Entity<PriceAlert>(entity =>
+        {
+            entity.HasKey(pa => pa.Id);
+            entity.Property(pa => pa.PriceAtAlert).HasColumnType("decimal(18,2)");
+
+            // Cascade delete: removing a wishlist item also removes all its price alert history.
+            entity.HasOne(pa => pa.WishlistItem)
+                  .WithMany(wi => wi.PriceAlerts)
+                  .HasForeignKey(pa => pa.WishlistItemId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            // Index for the job's duplicate-check query: find the latest alert for a WishlistItemId
+            entity.HasIndex(pa => pa.WishlistItemId)
+                  .HasDatabaseName("IX_PriceAlerts_WishlistItemId");
         });
 
         // Seed Data

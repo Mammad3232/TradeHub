@@ -54,6 +54,14 @@
               "target": "Package",
               "version": "[4.2.0, )"
             },
+            "Hangfire.AspNetCore": {
+              "target": "Package",
+              "version": "[1.8.24, )"
+            },
+            "Hangfire.SqlServer": {
+              "target": "Package",
+              "version": "[1.8.24, )"
+            },
             "MailKit": {
               "target": "Package",
               "version": "[4.9.0, )"

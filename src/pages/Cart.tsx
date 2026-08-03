@@ -237,6 +237,23 @@ export const Cart: React.FC = () => {
                         <p className="text-sm font-black text-purple-400 mt-1">
                           {formatPrice(item?.price ?? 0)}
                         </p>
+                        {(() => {
+                          const itemStock = item?.stockQuantity ?? item?.stock;
+                          const isMaxReached = itemStock !== undefined && itemStock > 0 && (item?.quantity ?? 1) >= itemStock;
+                          if (itemStock === undefined) return null;
+                          if (isMaxReached) {
+                            return (
+                              <p className="text-[11px] font-bold text-amber-400 mt-0.5">
+                                Max stock reached ({itemStock})
+                              </p>
+                            );
+                          }
+                          return (
+                            <p className="text-[11px] font-medium text-slate-400 mt-0.5">
+                              {itemStock} available in stock
+                            </p>
+                          );
+                        })()}
                       </div>
                     </div>
 
@@ -253,31 +270,58 @@ export const Cart: React.FC = () => {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <input
-                          type="number"
-                          min={1}
-                          max={item?.stock}
-                          value={item?.quantity ?? 1}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value, 10);
-                            if (!isNaN(val)) {
-                              updateQty(item.id, val);
-                            }
-                          }}
-                          onBlur={(e) => {
-                            let val = parseInt(e.target.value, 10);
-                            if (isNaN(val) || val < 1) val = 1;
-                            if (item?.stock !== undefined && item?.stock !== null && val > item.stock) {
-                              val = item.stock;
-                            }
-                            updateQty(item.id, val);
-                          }}
-                          className="w-10 text-center text-sm font-bold text-white bg-transparent focus:outline-none focus:ring-1 focus:ring-purple-500 rounded border border-slate-800/80 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                        />
+
+                        {(() => {
+                          const itemStock = item?.stockQuantity ?? item?.stock;
+                          return (
+                            <input
+                              type="number"
+                              min={1}
+                              max={itemStock}
+                              step={1}
+                              value={item?.quantity ?? 1}
+                              onKeyDown={(e) => {
+                                if (['e', 'E', '+', '-', '.', ','].includes(e.key)) {
+                                  e.preventDefault();
+                                }
+                              }}
+                              onChange={(e) => {
+                                const raw = e.target.value.replace(/[^0-9]/g, '');
+                                if (raw === '') return;
+                                let val = parseInt(raw, 10);
+                                if (isNaN(val)) return;
+
+                                if (itemStock !== undefined && itemStock > 0 && val > itemStock) {
+                                  val = itemStock;
+                                  pushToast(`Only ${itemStock} item${itemStock > 1 ? 's' : ''} available in stock.`, 'info');
+                                }
+                                updateQty(item.id, Math.max(1, val));
+                              }}
+                              onBlur={(e) => {
+                                let val = parseInt(e.target.value.replace(/[^0-9]/g, ''), 10);
+                                if (isNaN(val) || val < 1) {
+                                  val = 1;
+                                }
+                                if (itemStock !== undefined && itemStock > 0 && val > itemStock) {
+                                  val = itemStock;
+                                  pushToast(`Only ${itemStock} item${itemStock > 1 ? 's' : ''} available in stock.`, 'info');
+                                }
+                                updateQty(item.id, val);
+                              }}
+                              className="w-12 text-center text-sm font-bold text-white bg-transparent focus:outline-none focus:ring-1 focus:ring-purple-500 rounded border border-slate-800/80 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                          );
+                        })()}
+
                         <button
                           type="button"
                           onClick={() => updateQty(item.id, (item?.quantity ?? 1) + 1)}
-                          disabled={item?.stock !== undefined && item?.stock !== null && (item?.quantity ?? 1) >= item.stock}
+                          disabled={(() => {
+                            const itemStock = item?.stockQuantity ?? item?.stock;
+                            return itemStock !== undefined && itemStock >= 0
+                              ? (item?.quantity ?? 1) >= itemStock
+                              : false;
+                          })()}
                           className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
                           aria-label="Increase quantity"
                         >

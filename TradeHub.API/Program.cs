@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Hangfire;
 using TradeHub.API.Data;
 using TradeHub.API.Hubs;
 using TradeHub.API.Middlewares;
@@ -33,6 +34,16 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IStockAlertService, StockAlertService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<PriceAlertJob>();
+
+// ── Hangfire Background Job Setup ──────────────────────────────────────────────
+builder.Services.AddHangfire(config => config
+    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+    .UseSimpleAssemblyNameTypeSerializer()
+    .UseRecommendedSerializerSettings()
+    .UseSqlServerStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHangfireServer();
 
 // ── AI Chat Proxy Services ───────────────────────────────────────────────────
 // HttpClient factory — the Groq client gets its base configuration here.
@@ -192,6 +203,9 @@ using (var scope = app.Services.CreateScope())
             await db.Database.ExecuteSqlRawAsync(
                 "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Users]') AND name = 'AvatarUrl') " +
                 "ALTER TABLE [Users] ADD [AvatarUrl] nvarchar(500) NULL;");
+            await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Products]') AND name = 'OldPrice') " +
+                "ALTER TABLE [Products] ADD [OldPrice] decimal(18,2) NULL;");
         }
         catch { /* ignore if already exists or sqlite/in-memory */ }
 
@@ -243,6 +257,14 @@ app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// ── Hangfire Dashboard & Recurring Job Setup ──────────────────────────────────
+app.UseHangfireDashboard("/hangfire");
+
+var checkInterval = builder.Configuration.GetValue<int>("Hangfire:CheckIntervalMinutes", 3);
+var cronExpression = $"*/{checkInterval} * * * *";
+RecurringJob.AddOrUpdate<PriceAlertJob>("check-price-drops", job => job.CheckWishlistPriceDrops(), cronExpression);
+
 app.MapControllers();
 
 // ── SignalR Hub Route ──────────────────────────────────────────────────────────

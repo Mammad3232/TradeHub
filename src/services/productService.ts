@@ -11,6 +11,7 @@ export interface Product {
   title: string;
   description: string;
   price: number;
+  oldPrice?: number | null;
   stockQuantity: number;
   lowStockThreshold?: number | null;
   image: string;
@@ -31,6 +32,7 @@ export interface CreateProductInput {
   name: string;
   description: string;
   price: number;
+  oldPrice?: number | null;
   stockQuantity: number;
   lowStockThreshold?: number | null;
   categoryId: number;

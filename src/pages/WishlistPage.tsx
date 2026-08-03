@@ -12,126 +12,114 @@ import {
   Layers,
   Star,
   Check,
+  TrendingDown,
+  Loader2,
+  LogIn,
 } from 'lucide-react';
 import { useShop, type WishlistItem } from '../context/ShopContext';
 import { useCurrency } from '../context/CurrencyContext';
 
+// ── Helpers ────────────────────────────────────────────────────────────────────
+const BACKEND_ORIGIN = 'http://localhost:5229';
+
+function resolveImage(raw?: string | null): string {
+  if (!raw) return '';
+  if (raw.startsWith('http://') || raw.startsWith('https://') || raw.startsWith('data:')) return raw;
+  return `${BACKEND_ORIGIN}${raw.startsWith('/') ? '' : '/'}${raw}`;
+}
+
+function getStoredUser() {
+  try {
+    const raw =
+      localStorage.getItem('vendora_user') ||
+      localStorage.getItem('mockUser') ||
+      localStorage.getItem('vendora_active_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Component ──────────────────────────────────────────────────────────────────
 export const WishlistPage: React.FC = () => {
   const { formatPrice } = useCurrency();
   const {
     wishlistItems,
+    wishlistLoading,
     addToCart,
-    toggleWishlist,
-    moveToCart,
+    removeFromWishlist,
     clearWishlist,
-    moveAllToCart,
     pushToast,
   } = useShop();
 
+  // ── Auth detection ───────────────────────────────────────────────────────────
+  const storedUser = getStoredUser();
+  const isLoggedIn = !!storedUser;
+
+  // ── UI state ─────────────────────────────────────────────────────────────────
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isClearModalOpen, setIsClearModalOpen] = useState(false);
-  const [addedIds, setAddedIds]                 = useState<Record<number, boolean>>({});
+  const [addedIds, setAddedIds] = useState<Record<number, boolean>>({});
+  const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
 
-  const handleAddToCart = (product: WishlistItem, e?: React.MouseEvent) => {
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+  const handleAddToCart = (item: WishlistItem, e?: React.MouseEvent) => {
     e?.preventDefault();
     e?.stopPropagation();
+    if (!item) return;
+    addToCart({ id: item.id, title: item.title, brand: item.brand, price: item.price, image: item.image, stockQuantity: item.stockQuantity });
+    setAddedIds((prev) => ({ ...prev, [item.id]: true }));
+    setTimeout(() => setAddedIds((prev) => ({ ...prev, [item.id]: false })), 1500);
+    pushToast(`"${item.title.split(' ').slice(0, 3).join(' ')}…" added to cart!`, 'cart');
+  };
 
+  const handleRemove = async (item: WishlistItem) => {
+    setRemovingIds((prev) => new Set(prev).add(item.id));
     try {
-      if (!product || product.id === undefined) return;
-      if (!addToCart) {
-        console.error('addToCart method unavailable');
-        pushToast('Unable to add item to cart', 'cart');
-        return;
-      }
-
-      const titleStr = product.title || (product as any).name || 'Product';
-      const priceVal = typeof product.price === 'number' && !isNaN(product.price) ? product.price : Number(product.price) || 0;
-
-      addToCart({
-        id: product.id,
-        title: titleStr,
-        brand: product.brand || 'Vendora',
-        price: priceVal,
-        image: product.image || '',
+      await removeFromWishlist(item.id);
+    } finally {
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
       });
-
-      setAddedIds((prev) => ({ ...prev, [product.id]: true }));
-      setTimeout(() => {
-        setAddedIds((prev) => ({ ...prev, [product.id]: false }));
-      }, 1500);
-
-      const titleSnippet = titleStr.split(' ').slice(0, 3).join(' ');
-      pushToast(`"${titleSnippet}…" added to cart!`, 'cart');
-    } catch (err) {
-      console.error('Error adding item to cart:', err);
-      pushToast('An error occurred while adding item to cart', 'cart');
     }
   };
 
-  const handleAddAllToCart = (e?: React.MouseEvent) => {
-    e?.preventDefault();
-    e?.stopPropagation();
-
-    try {
-      if (!addToCart) {
-        console.error('addToCart method unavailable');
-        pushToast('Unable to add items to cart', 'cart');
-        return;
-      }
-
-      if (!wishlistItems || wishlistItems.length === 0) return;
-
-      const validItems = wishlistItems.filter((item): item is WishlistItem => !!item && item.id !== undefined);
-      if (validItems.length === 0) return;
-
-      validItems.forEach((item) => {
-        const titleStr = item.title || (item as any).name || 'Product';
-        const priceVal = typeof item.price === 'number' && !isNaN(item.price) ? item.price : Number(item.price) || 0;
-
-        addToCart({
-          id: item.id,
-          title: titleStr,
-          brand: item.brand || 'Vendora',
-          price: priceVal,
-          image: item.image || '',
-        });
-      });
-
-      const count = validItems.length;
-      pushToast(`Added all ${count} item${count > 1 ? 's' : ''} to cart!`, 'cart');
-    } catch (err) {
-      console.error('Error adding all items to cart:', err);
-      pushToast('An error occurred while adding items to cart', 'cart');
-    }
+  const handleAddAllToCart = () => {
+    if (wishlistItems.length === 0) return;
+    wishlistItems.forEach((item) =>
+      addToCart({ id: item.id, title: item.title, brand: item.brand, price: item.price, image: item.image, stockQuantity: item.stockQuantity })
+    );
+    pushToast(`Added all ${wishlistItems.length} item${wishlistItems.length > 1 ? 's' : ''} to cart!`, 'cart');
   };
 
-  // Extract unique categories from saved wishlist items
+  const handleConfirmClear = async () => {
+    await clearWishlist();
+    setIsClearModalOpen(false);
+  };
+
+  // ── Derived UI values ─────────────────────────────────────────────────────────
   const categories = useMemo(() => {
     const catSet = new Set<string>();
-    wishlistItems.forEach((item) => {
-      if (item.category) catSet.add(item.category);
-    });
+    wishlistItems.forEach((item) => { if (item.category) catSet.add(item.category); });
     return ['All', ...Array.from(catSet)];
   }, [wishlistItems]);
 
-  // Filter items based on active category tab
   const filteredItems = useMemo(() => {
     if (selectedCategory === 'All') return wishlistItems;
     return wishlistItems.filter((item) => item.category === selectedCategory);
   }, [wishlistItems, selectedCategory]);
 
-  const handleConfirmClear = () => {
-    clearWishlist();
-    setIsClearModalOpen(false);
-  };
+  const priceDropCount = wishlistItems.filter((i) => i.hasPriceDropped).length;
 
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 py-10 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* ── Page Header Section ────────────────────────────────────────── */}
+
+        {/* ── Page Header ──────────────────────────────────────────────────────── */}
         <div className="bg-[#0E1524] border border-slate-800/80 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col md:flex-row md:items-center md:justify-between gap-6 relative overflow-hidden">
-          {/* Background Ambient Glow */}
           <div className="absolute -top-24 -left-24 w-60 h-60 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-rose-600/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -144,13 +132,21 @@ export const WishlistPage: React.FC = () => {
               My Wishlist
             </h1>
             <p className="text-sm text-slate-400">
-              {wishlistItems.length === 0
+              {wishlistLoading
+                ? 'Loading your wishlist…'
+                : wishlistItems.length === 0
                 ? 'Your wishlist is currently empty.'
                 : `You have ${wishlistItems.length} saved product${wishlistItems.length > 1 ? 's' : ''} in your collection.`}
             </p>
+            {/* Price drop summary badge */}
+            {priceDropCount > 0 && (
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold mt-1">
+                <TrendingDown className="w-3.5 h-3.5" />
+                <span>🎉 {priceDropCount} item{priceDropCount > 1 ? 's have' : ' has'} dropped in price!</span>
+              </div>
+            )}
           </div>
 
-          {/* Batch Actions Header Controls */}
           {wishlistItems.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 relative z-10">
               <button
@@ -161,7 +157,6 @@ export const WishlistPage: React.FC = () => {
                 <ShoppingCart className="w-4 h-4" />
                 <span>Add All to Cart</span>
               </button>
-
               <button
                 type="button"
                 onClick={() => setIsClearModalOpen(true)}
@@ -174,20 +169,39 @@ export const WishlistPage: React.FC = () => {
           )}
         </div>
 
-        {/* ── Empty State View ───────────────────────────────────────────── */}
-        {wishlistItems.length === 0 ? (
+        {/* ── Guest CTA to log in ───────────────────────────────────────────────── */}
+        {!isLoggedIn && wishlistItems.length > 0 && (
+          <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3 text-sm">
+            <LogIn className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <p className="text-amber-300">
+              <span className="font-bold">Log in to enable price drop alerts!</span>{' '}
+              <span className="text-amber-400/80">We'll notify you when prices fall on your saved items.</span>
+            </p>
+            <Link to="/login" className="ml-auto px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black text-xs font-black transition-colors flex-shrink-0">
+              Log In
+            </Link>
+          </div>
+        )}
+
+        {/* ── Loading spinner ───────────────────────────────────────────────────── */}
+        {wishlistLoading && (
+          <div className="flex justify-center py-20 text-purple-400">
+            <Loader2 className="w-10 h-10 animate-spin" />
+          </div>
+        )}
+
+        {/* ── Empty State ───────────────────────────────────────────────────────── */}
+        {!wishlistLoading && wishlistItems.length === 0 && (
           <div className="bg-[#0E1524] border border-slate-800 rounded-3xl p-12 text-center max-w-2xl mx-auto shadow-2xl space-y-6 my-12 animate-in fade-in zoom-in-95 duration-300">
             <div className="w-20 h-20 rounded-3xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto shadow-inner">
               <HeartOff className="w-10 h-10" />
             </div>
-
             <div className="space-y-2">
               <h2 className="text-2xl font-black text-white">Your Wishlist is Empty</h2>
               <p className="text-slate-400 text-sm max-w-md mx-auto">
                 Explore our catalog to save your favorite products, track price drops, and move items to your cart anytime.
               </p>
             </div>
-
             <div className="pt-2">
               <Link
                 to="/"
@@ -199,9 +213,12 @@ export const WishlistPage: React.FC = () => {
               </Link>
             </div>
           </div>
-        ) : (
+        )}
+
+        {/* ── Product Grid ──────────────────────────────────────────────────────── */}
+        {!wishlistLoading && wishlistItems.length > 0 && (
           <>
-            {/* ── Category Filters Header ────────────────────────────────────── */}
+            {/* Category Filter Pills */}
             {categories.length > 1 && (
               <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-widest mr-2 flex-shrink-0">
@@ -212,9 +229,7 @@ export const WishlistPage: React.FC = () => {
                   const count = cat === 'All'
                     ? wishlistItems.length
                     : wishlistItems.filter((i) => i.category === cat).length;
-
                   const isActive = selectedCategory === cat;
-
                   return (
                     <button
                       key={cat}
@@ -229,42 +244,59 @@ export const WishlistPage: React.FC = () => {
                       <span>{cat}</span>
                       <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
                         isActive ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
-                      }`}>
-                        {count}
-                      </span>
+                      }`}>{count}</span>
                     </button>
                   );
                 })}
               </div>
             )}
 
-            {/* ── Filtered Product Grid ──────────────────────────────────────── */}
+            {/* Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredItems.map((product) => {
-                const isInStock = (product as WishlistItem & { inStock?: boolean }).inStock !== false;
+              {filteredItems.map((item) => {
+                const isInStock = item.stockQuantity === undefined || item.stockQuantity > 0;
+                const isRemoving = removingIds.has(item.id);
 
                 return (
                   <article
-                    key={product.id}
-                    className="group relative bg-[#0E1524] border border-slate-800 rounded-3xl overflow-hidden flex flex-col hover:border-purple-500/50 hover:-translate-y-1 transition-all duration-300 shadow-xl"
+                    key={`${item.wishlistItemId ?? item.id}`}
+                    className={`group relative bg-[#0E1524] border rounded-3xl overflow-hidden flex flex-col hover:-translate-y-1 transition-all duration-300 shadow-xl ${
+                      item.hasPriceDropped
+                        ? 'border-emerald-500/40 hover:border-emerald-400/60'
+                        : 'border-slate-800 hover:border-purple-500/50'
+                    }`}
                   >
-                    {/* Product Image Box */}
-                    <div className="relative h-60 w-full overflow-hidden bg-slate-950 rounded-t-3xl cursor-pointer">
-                      <Link to={`/product/${product.id}`} className="block w-full h-full">
+                    {/* Price Drop Glow if applicable */}
+                    {item.hasPriceDropped && (
+                      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent pointer-events-none rounded-3xl" />
+                    )}
+
+                    {/* Image */}
+                    <div className="relative h-60 w-full overflow-hidden bg-slate-950 rounded-t-3xl">
+                      <Link to={`/product/${item.id}`} className="block w-full h-full">
                         <img
-                          src={product.image}
-                          alt={product.title}
+                          src={resolveImage(item.image)}
+                          alt={item.title}
                           className={`w-full h-full object-cover rounded-t-3xl transition-transform duration-500 ${
                             isInStock ? 'group-hover:scale-105' : 'grayscale opacity-75'
                           }`}
                         />
                       </Link>
 
-                      {/* Faded overlay */}
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                      {/* Out of Stock Badge */}
-                      {!isInStock && (
+                      {/* Price drop badge */}
+                      {item.hasPriceDropped && (
+                        <div className="absolute top-3 left-3 z-10">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-emerald-500 text-white shadow-lg shadow-emerald-500/40 flex items-center gap-1">
+                            <TrendingDown className="w-3 h-3" />
+                            Price Drop!
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Out of stock badge */}
+                      {!isInStock && !item.hasPriceDropped && (
                         <div className="absolute top-3 left-3 z-10">
                           <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-rose-600 text-white shadow-lg shadow-rose-600/30">
                             Out of Stock
@@ -272,86 +304,86 @@ export const WishlistPage: React.FC = () => {
                         </div>
                       )}
 
-                      {/* Category Badge if in stock */}
-                      {isInStock && product.category && (
+                      {/* Category badge */}
+                      {isInStock && !item.hasPriceDropped && item.category && (
                         <div className="absolute top-3 left-3 z-10">
                           <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md bg-purple-600/80 backdrop-blur-md text-white shadow-lg">
-                            {product.category}
+                            {item.category}
                           </span>
                         </div>
                       )}
 
-                      {/* Trash / Remove Button */}
+                      {/* Remove button */}
                       <button
                         type="button"
-                        onClick={() => {
-                          toggleWishlist(product);
-                          pushToast('Removed from wishlist', 'wishlist');
-                        }}
-                        className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/50 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 hover:scale-110 transition-all cursor-pointer"
+                        onClick={() => handleRemove(item)}
+                        disabled={isRemoving}
+                        className="absolute top-3 right-3 z-10 p-2.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-slate-700/50 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 hover:scale-110 transition-all cursor-pointer disabled:opacity-50"
                         title="Remove from Wishlist"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        {isRemoving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
 
-                    {/* Card Content */}
+                    {/* Card Body */}
                     <div className="p-5 flex-1 flex flex-col gap-3">
                       <div className="flex items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                        <span>{product.brand}</span>
+                        <span>{item.brand}</span>
                       </div>
 
-                      <h3 className="font-bold text-white text-sm leading-snug line-clamp-2 transition-colors">
-                        <Link to={`/product/${product.id}`} className="hover:text-purple-300 transition-colors">
-                          {product.title}
+                      <h3 className="font-bold text-white text-sm leading-snug line-clamp-2">
+                        <Link to={`/product/${item.id}`} className="hover:text-purple-300 transition-colors">
+                          {item.title}
                         </Link>
                       </h3>
 
-                      {/* Rating stars */}
-                      {product.rating && (
+                      {item.rating && (
                         <div className="flex items-center gap-1">
-                          <div className="flex items-center gap-0.5">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                className={`w-3.5 h-3.5 ${
-                                  star <= Math.round(product.rating || 5)
-                                    ? 'fill-amber-400 text-amber-400'
-                                    : 'fill-slate-800 text-slate-800'
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <span className="text-xs font-bold text-slate-400 ml-1">{product.rating.toFixed(1)}</span>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              className={`w-3.5 h-3.5 ${
+                                star <= Math.round(item.rating ?? 0)
+                                  ? 'fill-amber-400 text-amber-400'
+                                  : 'fill-slate-800 text-slate-800'
+                              }`}
+                            />
+                          ))}
+                          <span className="text-xs font-bold text-slate-400 ml-1">{item.rating.toFixed(1)}</span>
                         </div>
                       )}
 
-                      {/* Price & Add to Cart Action */}
+                      {/* Price section */}
                       <div className="mt-auto pt-4 border-t border-slate-800/80 flex items-center justify-between gap-3">
-                        <div>
-                          <span className="text-lg font-black text-white">{formatPrice(product.price)}</span>
+                        <div className="flex flex-col">
+                          <span className={`text-lg font-black ${item.hasPriceDropped ? 'text-emerald-400' : 'text-white'}`}>
+                            {formatPrice(item.price)}
+                          </span>
+                          {item.hasPriceDropped && item.priceWhenAdded !== undefined && (
+                            <span className="text-xs text-slate-500 line-through">
+                              was {formatPrice(item.priceWhenAdded)}
+                            </span>
+                          )}
                         </div>
 
                         {isInStock ? (
                           <button
                             type="button"
-                            onClick={(e) => handleAddToCart(product, e)}
+                            onClick={(e) => handleAddToCart(item, e)}
                             className={`px-4 py-2.5 rounded-xl border text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer ${
-                              addedIds[product.id]
+                              addedIds[item.id]
                                 ? 'bg-emerald-500/20 border-emerald-500 text-emerald-400'
                                 : 'bg-purple-600 hover:bg-purple-500 border-purple-500 text-white shadow-purple-600/20'
                             }`}
                           >
-                            {addedIds[product.id] ? (
-                              <>
-                                <Check className="w-3.5 h-3.5" />
-                                <span>Added!</span>
-                              </>
+                            {addedIds[item.id] ? (
+                              <><Check className="w-3.5 h-3.5" /><span>Added!</span></>
                             ) : (
-                              <>
-                                <ShoppingCart className="w-3.5 h-3.5" />
-                                <span>Add to Cart</span>
-                              </>
+                              <><ShoppingCart className="w-3.5 h-3.5" /><span>Add to Cart</span></>
                             )}
                           </button>
                         ) : (
@@ -375,11 +407,10 @@ export const WishlistPage: React.FC = () => {
 
       </div>
 
-      {/* ── Clear Wishlist Confirmation Modal Overlay ───────────────────────── */}
+      {/* ── Clear Wishlist Modal ──────────────────────────────────────────────── */}
       {isClearModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#0E1524] border border-slate-800 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl p-6 space-y-6">
-            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400">
@@ -398,13 +429,9 @@ export const WishlistPage: React.FC = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
-
-            {/* Modal Description */}
             <p className="text-xs text-slate-300 leading-relaxed">
-              Are you sure you want to clear your entire wishlist? All saved products will be permanently removed from your wishlist.
+              Are you sure you want to clear your entire wishlist? All saved products will be permanently removed.
             </p>
-
-            {/* Modal Footer Buttons */}
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 type="button"

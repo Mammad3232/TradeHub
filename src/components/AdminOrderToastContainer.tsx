@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, ShoppingBag, X, ArrowRight, AlertTriangle, Eye, User } from 'lucide-react';
+import { Bell, ShoppingBag, X, ArrowRight, AlertTriangle, Eye, User, TrendingDown } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,6 +13,49 @@ export const AdminOrderToastContainer: React.FC = () => {
     <div className="fixed top-20 right-4 z-[300] flex flex-col gap-3 max-w-sm w-full pointer-events-none">
       {liveToasts.map((toast) => {
         if (!toast) return null;
+
+        // ── 0. Price Drop Toast (customer-facing) ──────────────────────────────
+        if (toast.type === 'PriceDrop') {
+          const pd = toast as any;
+          const savings = ((pd.oldPrice ?? 0) - (pd.newPrice ?? 0)).toFixed(2);
+          return (
+            <div
+              key={toast.id}
+              className="pointer-events-auto bg-slate-900 border-2 border-emerald-500/80 rounded-2xl shadow-2xl p-4 text-slate-100 flex items-start gap-3.5 animate-in slide-in-from-top-5 duration-300 backdrop-blur-md"
+            >
+              <div className="p-2.5 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl text-white flex-shrink-0 shadow-lg shadow-emerald-500/20">
+                <TrendingDown className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                    🎉 Price Drop Alert!
+                  </span>
+                  <button
+                    onClick={() => dismissToast(toast.id)}
+                    className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-sm font-semibold text-white mt-1 truncate">
+                  {pd.productName}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-slate-400 line-through">${(pd.oldPrice ?? 0).toFixed(2)}</span>
+                  <span className="text-sm font-extrabold text-emerald-400">${(pd.newPrice ?? 0).toFixed(2)}</span>
+                  <span className="text-[10px] font-bold text-emerald-300/70">You save ${savings}!</span>
+                </div>
+                <button
+                  onClick={() => { dismissToast(toast.id); navigate('/wishlist'); }}
+                  className="mt-2 text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 transition-all group cursor-pointer"
+                >
+                  View Wishlist <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              </div>
+            </div>
+          );
+        }
 
         // ── 1. Low Stock Toast ───────────────────────────────────────────────
         if (toast.type === 'LowStock') {

@@ -177,8 +177,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="flex items-end justify-between mt-auto pt-2 border-t border-slate-800/80">
           <div>
             <span className="text-xl font-extrabold text-white">{formatPrice(product.price)}</span>
-            {/* Optional original price crossed out — placeholder */}
-            {/* <span className="text-xs text-slate-500 line-through ml-1.5">$59.99</span> */}
+            {product.oldPrice && Number(product.oldPrice) > Number(product.price) && (
+              <span className="text-xs text-slate-500 line-through ml-1.5">{formatPrice(Number(product.oldPrice))}</span>
+            )}
           </div>
           <span className="text-xs text-emerald-400 font-medium">In Stock</span>
         </div>

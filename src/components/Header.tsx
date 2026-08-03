@@ -614,7 +614,12 @@ export const Header: React.FC<HeaderProps> = ({
                                   <button
                                     type="button"
                                     onClick={() => updateQty(item.id, (item?.quantity ?? 1) + 1)}
-                                    disabled={item?.stock !== undefined && item?.stock !== null && (item?.quantity ?? 1) >= item.stock}
+                                    disabled={(() => {
+                                      const itemStock = item?.stockQuantity ?? item?.stock;
+                                      return itemStock !== undefined && itemStock >= 0
+                                        ? (item?.quantity ?? 1) >= itemStock
+                                        : false;
+                                    })()}
                                     className="w-5 h-5 rounded-md bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed text-slate-300 flex items-center justify-center cursor-pointer transition-colors"
                                   >
                                     <Plus className="w-3 h-3" />

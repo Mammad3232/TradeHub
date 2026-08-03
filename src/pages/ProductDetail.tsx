@@ -32,6 +32,7 @@ import {
   getRecentlyViewed,
   type Product as ProductType,
 } from '../services/productService';
+import { addToWishlistApi, removeFromWishlistApi, getWishlistApi } from '../services/wishlistService';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const BACKEND_ORIGIN = 'http://localhost:5229';
@@ -128,6 +129,28 @@ export const ProductDetail: React.FC = () => {
   const recsContainerRef = useRef<HTMLDivElement>(null);
   const recentContainerRef = useRef<HTMLDivElement>(null);
 
+  // ── Backend wishlist state (for logged-in users) ────────────────────────────
+  // apiWishlistId: the server-side WishlistItem.Id for this product (null = not wishlisted)
+  const [apiWishlistId, setApiWishlistId] = useState<number | null>(null);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  // optimisticWishlisted: true when UI shows filled heart (before API responds)
+  const [optimisticWishlisted, setOptimisticWishlisted] = useState<boolean | null>(null);
+
+  /** Returns the stored user object from localStorage, or null if not logged in. */
+  const getStoredUser = () => {
+    try {
+      const raw =
+        localStorage.getItem('vendora_user') ||
+        localStorage.getItem('mockUser') ||
+        localStorage.getItem('vendora_active_user');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const isLoggedIn = !!getStoredUser();
+
   const scrollRecs = (direction: 'left' | 'right') => {
     if (recsContainerRef.current) {
       const scrollAmount = direction === 'left' ? -350 : 350;
@@ -142,7 +165,7 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
-  // Fetch product & recommendations on mount / id change
+  // Fetch product, recommendations, and (if logged in) backend wishlist on mount / id change
   useEffect(() => {
     if (!id) return;
     const numId = Number(id);
@@ -156,6 +179,8 @@ export const ProductDetail: React.FC = () => {
     setRecentlyViewed([]);
     setRecsLoading(false);
     setRecentLoading(false);
+    setApiWishlistId(null);
+    setOptimisticWishlisted(null);
 
     getProductById(numId)
       .then((data) => {
@@ -190,6 +215,25 @@ export const ProductDetail: React.FC = () => {
 
   }, [id]);
 
+  // When logged in: sync heart state from backend wishlist
+  useEffect(() => {
+    if (!isLoggedIn || !id) return;
+    getWishlistApi()
+      .then((items) => {
+        const match = items.find((w) => w.productId === Number(id));
+        if (match) {
+          setApiWishlistId(match.id);
+          setOptimisticWishlisted(true);
+        } else {
+          setApiWishlistId(null);
+          setOptimisticWishlisted(false);
+        }
+      })
+      .catch(() => {
+        // Ignore: fall back to local ShopContext state
+      });
+  }, [id, isLoggedIn]);
+
   // ── Derived values (safe even when product is null) ──────────────────────────
   const resolvedImage = useMemo(() => resolveImage(product?.image), [product]);
 
@@ -212,8 +256,14 @@ export const ProductDetail: React.FC = () => {
   }, [product, resolvedImage]);
 
   const maxStock      = product?.stockQuantity ?? product?.stock ?? null;
-  const originalPrice = product ? Number(product.price) * 1.25 : 0;
-  const isWishlisted  = wishlistItems.some((w) => String(w.id) === String(product?.id));
+  const hasDiscount    = Boolean(product?.oldPrice && Number(product.oldPrice) > Number(product.price));
+  const discountPercent = hasDiscount && product?.oldPrice
+    ? Math.round(((Number(product.oldPrice) - Number(product.price)) / Number(product.oldPrice)) * 100)
+    : null;
+  // Use optimistic state when logged in; fall back to ShopContext local state for guests
+  const isWishlisted  = isLoggedIn
+    ? (optimisticWishlisted ?? wishlistItems.some((w) => String(w.id) === String(product?.id)))
+    : wishlistItems.some((w) => String(w.id) === String(product?.id));
   const isOutOfStock  = maxStock !== null && maxStock <= 0;
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
@@ -245,19 +295,55 @@ export const ProductDetail: React.FC = () => {
     setTimeout(() => setAddedToCart(false), 1800);
   };
 
-  const handleWishlistToggle = () => {
-    if (!product) return;
-    toggleWishlist({
-      id:       product.id,
-      title:    product.title,
-      price:    Number(product.price),
-      image:    resolvedImage,
-      brand:    product.vendorName,
-      category: product.category,
-      rating:   product.rating,
-    });
-    const action = isWishlisted ? 'removed from' : 'added to';
-    pushToast(`"${(product.title as string).split(' ').slice(0, 3).join(' ')}..." ${action} wishlist!`, 'info');
+  const handleWishlistToggle = async () => {
+    if (!product || wishlistLoading) return;
+
+    if (isLoggedIn) {
+      // ── LOGGED-IN: Optimistic UI + API call ─────────────────────────────────
+      const wasWishlisted = optimisticWishlisted ?? false;
+      const prevApiId = apiWishlistId;
+
+      // 1. Optimistic toggle immediately
+      setOptimisticWishlisted(!wasWishlisted);
+      setWishlistLoading(true);
+
+      try {
+        if (wasWishlisted && prevApiId !== null) {
+          // Remove from backend
+          await removeFromWishlistApi(prevApiId);
+          setApiWishlistId(null);
+          setOptimisticWishlisted(false);
+          pushToast(`"${(product.title as string).split(' ').slice(0, 3).join(' ')}..." removed from wishlist!`, 'info');
+        } else {
+          // Add to backend
+          const created = await addToWishlistApi(product.id);
+          setApiWishlistId(created.id);
+          setOptimisticWishlisted(true);
+          pushToast(`"${(product.title as string).split(' ').slice(0, 3).join(' ')}..." added to wishlist! 💛 You'll be notified if the price drops.`, 'info');
+        }
+      } catch (err: any) {
+        // Revert optimistic UI on failure
+        setOptimisticWishlisted(wasWishlisted);
+        setApiWishlistId(prevApiId);
+        const errMsg = err?.message || 'Failed to update wishlist.';
+        pushToast(errMsg, 'info');
+      } finally {
+        setWishlistLoading(false);
+      }
+    } else {
+      // ── GUEST: Local ShopContext toggle ────────────────────────────────────
+      toggleWishlist({
+        id:       product.id,
+        title:    product.title,
+        price:    Number(product.price),
+        image:    resolvedImage,
+        brand:    product.vendorName,
+        category: product.category,
+        rating:   product.rating,
+      });
+      const action = isWishlisted ? 'removed from' : 'added to';
+      pushToast(`"${(product.title as string).split(' ').slice(0, 3).join(' ')}..." ${action} wishlist!`, 'info');
+    }
   };
 
   const handleShare = () => {
@@ -461,12 +547,18 @@ export const ProductDetail: React.FC = () => {
                   <span className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
                     {formatPrice(Number(product.price))}
                   </span>
-                  <span className="text-sm font-semibold text-slate-500 line-through mt-1">
-                    {formatPrice(originalPrice)}
-                  </span>
-                  <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1">
-                    <Sparkles className="w-3.5 h-3.5" /> Save 20%
-                  </span>
+                  {hasDiscount && product?.oldPrice && (
+                    <>
+                      <span className="text-sm font-semibold text-slate-500 line-through mt-1">
+                        {formatPrice(Number(product.oldPrice))}
+                      </span>
+                      {discountPercent !== null && discountPercent > 0 && (
+                        <span className="bg-emerald-500/10 text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-lg border border-emerald-500/20 uppercase tracking-wider flex items-center gap-1">
+                          <Sparkles className="w-3.5 h-3.5" /> Save {discountPercent}%
+                        </span>
+                      )}
+                    </>
+                  )}
                 </div>
                 {maxStock !== null && (
                   <div className={`text-xs font-semibold flex items-center gap-1.5 ${
