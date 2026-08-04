@@ -4,6 +4,15 @@ import { AddProductModal } from '../components/AddProductModal';
 import { getProducts, updateProduct, deleteProduct, getImageUrl, type Product as ApiProduct } from '../services/productService';
 import { updateUserRoleApi, getAllUsersApi, type UserResponseDto } from '../services/userService';
 import { getMyOrders, updateOrderStatus, type OrderResponse } from '../services/orderService';
+import {
+  getSettingsApi,
+  updateSettingsApi,
+  uploadLogoApi,
+  uploadFaviconApi,
+  removeLogoApi,
+  removeFaviconApi,
+  getFullImageUrl,
+} from '../services/settingsService';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminVendors } from '../components/AdminVendors';
 import {
@@ -268,6 +277,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const [logoDragging, setLogoDragging]     = useState(false);
   const [faviconDragging, setFaviconDragging] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo]       = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
 
   const logoInputRef    = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
@@ -386,35 +397,114 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     }
   }, [activeTab, fetchOrders]);
 
-  const handleLogoSelect = (file: File | null) => {
+  const handleLogoSelect = async (file: File | null) => {
     if (!file) return;
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    if (logoPreview && logoPreview.startsWith('blob:')) URL.revokeObjectURL(logoPreview);
     setLogoFile(file);
-    setLogoPreview(URL.createObjectURL(file));
+    const localUrl = URL.createObjectURL(file);
+    setLogoPreview(localUrl);
+
+    // Option A: Instant Upload
+    setIsUploadingLogo(true);
+    try {
+      const res = await uploadLogoApi(file);
+      if (res?.logoUrl) {
+        const fullUrl = getFullImageUrl(res.logoUrl);
+        setLogoPreview(fullUrl || localUrl);
+        if (updateSiteSettings) {
+          updateSiteSettings({ logoUrl: res.logoUrl });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to upload logo:', err);
+    } finally {
+      setIsUploadingLogo(false);
+    }
   };
 
-  const handleFaviconSelect = (file: File | null) => {
+  const handleFaviconSelect = async (file: File | null) => {
     if (!file) return;
-    if (faviconPreview) URL.revokeObjectURL(faviconPreview);
+    if (faviconPreview && faviconPreview.startsWith('blob:')) URL.revokeObjectURL(faviconPreview);
     setFaviconFile(file);
-    setFaviconPreview(URL.createObjectURL(file));
+    const localUrl = URL.createObjectURL(file);
+    setFaviconPreview(localUrl);
+
+    // Option A: Instant Upload
+    setIsUploadingFavicon(true);
+    try {
+      const res = await uploadFaviconApi(file);
+      if (res?.faviconUrl) {
+        const fullUrl = getFullImageUrl(res.faviconUrl);
+        setFaviconPreview(fullUrl || localUrl);
+        if (updateSiteSettings) {
+          updateSiteSettings({ faviconUrl: res.faviconUrl });
+        }
+      }
+    } catch (err) {
+      console.error('Failed to upload favicon:', err);
+    } finally {
+      setIsUploadingFavicon(false);
+    }
   };
 
-  const clearLogo = (e: React.MouseEvent) => {
+  const clearLogo = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    if (logoPreview && logoPreview.startsWith('blob:')) URL.revokeObjectURL(logoPreview);
     setLogoFile(null);
     setLogoPreview(null);
     if (logoInputRef.current) logoInputRef.current.value = '';
+
+    try {
+      await removeLogoApi();
+      if (updateSiteSettings) {
+        updateSiteSettings({ logoUrl: undefined });
+      }
+    } catch (err) {
+      console.error('Failed to remove logo:', err);
+    }
   };
 
-  const clearFavicon = (e: React.MouseEvent) => {
+  const clearFavicon = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (faviconPreview) URL.revokeObjectURL(faviconPreview);
+    if (faviconPreview && faviconPreview.startsWith('blob:')) URL.revokeObjectURL(faviconPreview);
     setFaviconFile(null);
     setFaviconPreview(null);
     if (faviconInputRef.current) faviconInputRef.current.value = '';
+
+    try {
+      await removeFaviconApi();
+      if (updateSiteSettings) {
+        updateSiteSettings({ faviconUrl: undefined });
+      }
+    } catch (err) {
+      console.error('Failed to remove favicon:', err);
+    }
   };
+
+  useEffect(() => {
+    getSettingsApi()
+      .then((res) => {
+        if (res) {
+          setSettings((prev) => ({
+            ...prev,
+            siteName: res.siteName || prev.siteName,
+            supportEmail: res.supportEmail || prev.supportEmail,
+            commissionRate: res.commissionRate ?? prev.commissionRate,
+            maintenanceMode: res.maintenanceMode ?? prev.maintenanceMode,
+            requireTwoFactor: res.requireTwoFactor ?? prev.requireTwoFactor,
+          }));
+          if (res.logoUrl) {
+            setLogoPreview(getFullImageUrl(res.logoUrl) || null);
+          }
+          if (res.faviconUrl) {
+            setFaviconPreview(getFullImageUrl(res.faviconUrl) || null);
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load settings from API:', err);
+      });
+  }, []);
 
   useEffect(() => {
     if (siteSettings?.siteName) {
@@ -422,6 +512,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
         ...prev,
         ...siteSettings,
       }));
+      if (siteSettings.logoUrl) {
+        setLogoPreview(getFullImageUrl(siteSettings.logoUrl) || null);
+      }
+      if (siteSettings.faviconUrl) {
+        setFaviconPreview(getFullImageUrl(siteSettings.faviconUrl) || null);
+      }
     }
   }, [siteSettings]);
 
@@ -547,36 +643,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
     e.preventDefault();
     setSaveStatus('saving');
 
-    // ── Build FormData for backend (logo + favicon + text settings) ──────────
-    // When a real /api/admin/settings endpoint exists, post `formData` directly.
-    const formData = new FormData();
-    formData.append('siteName',        settings.siteName);
-    formData.append('supportEmail',    settings.supportEmail);
-    formData.append('commissionRate',  String(settings.commissionRate));
-    formData.append('maintenanceMode', String(settings.maintenanceMode));
-    formData.append('requireTwoFactor',String(settings.requireTwoFactor));
-    if (logoFile)    formData.append('logo',    logoFile,    logoFile.name);
-    if (faviconFile) formData.append('favicon', faviconFile, faviconFile.name);
+    try {
+      const formData = new FormData();
+      formData.append('siteName',        settings.siteName);
+      formData.append('supportEmail',    settings.supportEmail || '');
+      formData.append('commissionRate',  String(settings.commissionRate));
+      formData.append('maintenanceMode', String(settings.maintenanceMode));
+      formData.append('requireTwoFactor',String(settings.requireTwoFactor));
+      if (logoFile)    formData.append('logo',    logoFile,    logoFile.name);
+      if (faviconFile) formData.append('favicon', faviconFile, faviconFile.name);
 
-    // TODO: Replace the mock delay below with a real API call, e.g.:
-    // await fetch('/api/admin/settings', { method: 'POST', body: formData });
-    await new Promise((r) => setTimeout(r, 1000));
+      const res = await updateSettingsApi(formData);
 
-    if (updateSiteSettings) {
-      updateSiteSettings({
-        siteName: settings.siteName,
-        supportEmail: settings.supportEmail,
-        commissionRate: settings.commissionRate,
-        maintenanceMode: settings.maintenanceMode,
-        requireTwoFactor: settings.requireTwoFactor,
-      });
-    }
-    setSaveStatus('saved');
-    setShowToast(true);
-    setTimeout(() => {
+      if (updateSiteSettings && res) {
+        updateSiteSettings({
+          siteName: res.siteName || settings.siteName,
+          supportEmail: res.supportEmail || settings.supportEmail,
+          commissionRate: res.commissionRate ?? settings.commissionRate,
+          maintenanceMode: res.maintenanceMode ?? settings.maintenanceMode,
+          requireTwoFactor: res.requireTwoFactor ?? settings.requireTwoFactor,
+          logoUrl: res.logoUrl,
+          faviconUrl: res.faviconUrl,
+        });
+      }
+      setSaveStatus('saved');
+      setShowToast(true);
+    } catch (err) {
+      console.error('Failed to update settings:', err);
       setSaveStatus('idle');
-      setShowToast(false);
-    }, 2500);
+    } finally {
+      setTimeout(() => {
+        setSaveStatus('idle');
+        setShowToast(false);
+      }, 2500);
+    }
   };
 
   // ── Chart Configs ────────────────────────────────────────────────────────────
@@ -1320,7 +1420,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                     ? 'border-indigo-500/40 bg-[#0E1524]'
                     : 'border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600'
                 }`}
-                onClick={() => !logoPreview && logoInputRef.current?.click()}
+                onClick={() => !logoPreview && !isUploadingLogo && logoInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setLogoDragging(true); }}
                 onDragLeave={() => setLogoDragging(false)}
                 onDrop={(e) => {
@@ -1342,7 +1442,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                   onChange={(e) => handleLogoSelect(e.target.files?.[0] ?? null)}
                 />
 
-                {logoPreview ? (
+                {isUploadingLogo ? (
+                  <div className="flex flex-col items-center justify-center py-4 gap-2">
+                    <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+                    <p className="text-xs text-indigo-400 font-bold">Uploading Logo...</p>
+                  </div>
+                ) : logoPreview ? (
                   /* ── Preview State ── */
                   <>
                     <div className="relative w-full flex items-center justify-center">
@@ -1356,20 +1461,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); logoInputRef.current?.click(); }}
-                        className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full transition-colors"
+                        className="text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full transition-colors cursor-pointer"
                       >
                         Change
                       </button>
                       <button
                         type="button"
                         onClick={clearLogo}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors"
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors cursor-pointer"
                       >
                         <X className="w-3 h-3 inline-block mr-1 -mt-0.5" />
                         Remove
                       </button>
                     </div>
-                    <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{logoFile?.name}</p>
+                    {logoFile && <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{logoFile.name}</p>}
                   </>
                 ) : (
                   /* ── Default Upload State ── */
@@ -1398,7 +1503,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                     ? 'border-purple-500/40 bg-[#0E1524]'
                     : 'border-slate-700 bg-[#0E1524] hover:bg-slate-800/60 hover:border-slate-600'
                 }`}
-                onClick={() => !faviconPreview && faviconInputRef.current?.click()}
+                onClick={() => !faviconPreview && !isUploadingFavicon && faviconInputRef.current?.click()}
                 onDragOver={(e) => { e.preventDefault(); setFaviconDragging(true); }}
                 onDragLeave={() => setFaviconDragging(false)}
                 onDrop={(e) => {
@@ -1420,7 +1525,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                   onChange={(e) => handleFaviconSelect(e.target.files?.[0] ?? null)}
                 />
 
-                {faviconPreview ? (
+                {isUploadingFavicon ? (
+                  <div className="flex flex-col items-center justify-center py-4 gap-2">
+                    <Loader2 className="w-8 h-8 text-purple-400 animate-spin" />
+                    <p className="text-xs text-purple-400 font-bold">Uploading Favicon...</p>
+                  </div>
+                ) : faviconPreview ? (
                   /* ── Preview State ── */
                   <>
                     <div className="relative flex items-center justify-center w-20 h-20 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden">
@@ -1434,20 +1544,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); faviconInputRef.current?.click(); }}
-                        className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full transition-colors"
+                        className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 bg-purple-500/10 border border-purple-500/20 px-3 py-1 rounded-full transition-colors cursor-pointer"
                       >
                         Change
                       </button>
                       <button
                         type="button"
                         onClick={clearFavicon}
-                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors"
+                        className="text-[11px] font-semibold text-slate-400 hover:text-red-400 bg-slate-800 border border-slate-700 hover:border-red-500/40 px-3 py-1 rounded-full transition-colors cursor-pointer"
                       >
                         <X className="w-3 h-3 inline-block mr-1 -mt-0.5" />
                         Remove
                       </button>
                     </div>
-                    <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{faviconFile?.name}</p>
+                    {faviconFile && <p className="text-[10px] text-slate-500 truncate max-w-[180px]">{faviconFile.name}</p>}
                   </>
                 ) : (
                   /* ── Default Upload State ── */

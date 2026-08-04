@@ -56,7 +56,7 @@ export interface HeaderCurrentUser {
 
 interface HeaderProps {
   currentUser?: HeaderCurrentUser;
-  siteSettings?: { siteName?: string };
+  siteSettings?: { siteName?: string; logoUrl?: string; faviconUrl?: string };
   onSignOut?: () => void;
 }
 
@@ -357,10 +357,24 @@ export const Header: React.FC<HeaderProps> = ({
                 <Menu className="w-6 h-6" />
               </button>
 
-              <Link to="/" className="flex items-center gap-2 group">
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/20 group-hover:bg-purple-500 transition-colors">
-                  <ShoppingBag className="w-5 h-5 text-white" />
-                </div>
+              <Link to="/" className="flex items-center gap-2 md:gap-3 group">
+                {/* Logo icon — custom image when set, purple icon bag as fallback */}
+                {siteSettings?.logoUrl ? (
+                  <img
+                    src={resolveProductImage(siteSettings.logoUrl)}
+                    alt={siteSettings.siteName || 'Logo'}
+                    className="h-8 w-8 md:h-10 md:w-10 object-contain rounded-lg flex-shrink-0"
+                    onError={(e) => {
+                      // If the custom logo fails to load, hide it so the fallback icon shows
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-8 h-8 md:w-10 md:h-10 bg-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-600/20 group-hover:bg-purple-500 transition-colors flex-shrink-0">
+                    <ShoppingBag className="w-5 h-5 text-white" />
+                  </div>
+                )}
+                {/* Marketplace name — always shown alongside logo */}
                 <span className="text-xl md:text-2xl font-bold text-white tracking-tight">
                   {siteSettings?.siteName || 'Vendora'}
                 </span>
@@ -810,10 +824,19 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative w-80 max-w-[85vw] bg-[#060913] text-slate-100 flex flex-col h-full shadow-2xl z-10 animate-in slide-in-from-left duration-250">
               <div className="p-4 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center">
-                    <ShoppingBag className="h-4 w-4 text-white" />
-                  </div>
-                  <span className="font-bold text-base">Menu</span>
+                  {siteSettings?.logoUrl ? (
+                    <img
+                      src={resolveProductImage(siteSettings.logoUrl)}
+                      alt={siteSettings?.siteName || 'Logo'}
+                      className="h-8 w-8 object-contain rounded-lg flex-shrink-0"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="h-4 w-4 text-white" />
+                    </div>
+                  )}
+                  <span className="font-bold text-base">{siteSettings?.siteName || 'Vendora'}</span>
                 </div>
                 <button type="button" onClick={() => setMobileMenuOpen(false)}
                   className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/50">

@@ -93,6 +93,8 @@ export interface SiteSettings {
   commissionRate?: number;
   maintenanceMode?: boolean;
   requireTwoFactor?: boolean;
+  logoUrl?: string;
+  faviconUrl?: string;
 }
 
 interface LayoutProps {
@@ -159,6 +161,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { AdminOrderToastContainer } from './components/AdminOrderToastContainer';
 import { RoleUpdateToast } from './components/RoleUpdateToast';
 import { logoutApi } from './services/authService';
+import { getSettingsApi, getFullImageUrl } from './services/settingsService';
 
 function App() {
   /**
@@ -263,6 +266,41 @@ function App() {
     window.addEventListener('vendora_user_update', handleUserUpdate);
     return () => window.removeEventListener('vendora_user_update', handleUserUpdate);
   }, []);
+
+  // Fetch initial site settings from backend on mount
+  useEffect(() => {
+    getSettingsApi()
+      .then((data) => {
+        if (data) {
+          setSiteSettings((prev) => ({
+            ...prev,
+            ...data,
+          }));
+        }
+      })
+      .catch(() => {
+        /* fallback to localStorage / default state */
+      });
+  }, []);
+
+  // Dynamically update document title and favicon when siteSettings change
+  useEffect(() => {
+    if (siteSettings.siteName) {
+      document.title = siteSettings.siteName;
+    }
+    if (siteSettings.faviconUrl) {
+      const fullFaviconUrl = getFullImageUrl(siteSettings.faviconUrl);
+      let faviconLink = document.querySelector<HTMLLinkElement>("link[rel*='icon']");
+      if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'shortcut icon';
+        document.head.appendChild(faviconLink);
+      }
+      if (fullFaviconUrl) {
+        faviconLink.href = fullFaviconUrl;
+      }
+    }
+  }, [siteSettings.siteName, siteSettings.faviconUrl]);
 
   return (
     <PreferencesProvider>

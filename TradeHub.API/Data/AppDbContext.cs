@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<ProductView> ProductViews => Set<ProductView>();
     public DbSet<WishlistItem> WishlistItems => Set<WishlistItem>();
     public DbSet<PriceAlert> PriceAlerts => Set<PriceAlert>();
+    public DbSet<SiteSetting> SiteSettings => Set<SiteSetting>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

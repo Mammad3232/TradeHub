@@ -206,8 +206,34 @@ using (var scope = app.Services.CreateScope())
             await db.Database.ExecuteSqlRawAsync(
                 "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Products]') AND name = 'OldPrice') " +
                 "ALTER TABLE [Products] ADD [OldPrice] decimal(18,2) NULL;");
+            await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SiteSettings') " +
+                "CREATE TABLE [SiteSettings] (" +
+                "[Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " +
+                "[SiteName] NVARCHAR(200) NOT NULL DEFAULT 'Vendora', " +
+                "[SupportEmail] NVARCHAR(250) NULL, " +
+                "[CommissionRate] FLOAT NOT NULL DEFAULT 5, " +
+                "[MaintenanceMode] BIT NOT NULL DEFAULT 0, " +
+                "[RequireTwoFactor] BIT NOT NULL DEFAULT 1, " +
+                "[LogoUrl] NVARCHAR(500) NULL, " +
+                "[FaviconUrl] NVARCHAR(500) NULL, " +
+                "[UpdatedAt] DATETIME2 NOT NULL DEFAULT GETUTCDATE()" +
+                ");");
         }
         catch { /* ignore if already exists or sqlite/in-memory */ }
+
+        if (!await db.SiteSettings.AnyAsync())
+        {
+            db.SiteSettings.Add(new TradeHub.API.Models.SiteSetting
+            {
+                SiteName = "Vendora",
+                SupportEmail = "support@vendora.store",
+                CommissionRate = 5,
+                MaintenanceMode = false,
+                RequireTwoFactor = true
+            });
+            await db.SaveChangesAsync();
+        }
 
         var products = await db.Products.ToListAsync();
         bool changed = false;
