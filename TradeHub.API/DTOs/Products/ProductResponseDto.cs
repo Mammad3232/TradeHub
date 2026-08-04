@@ -19,7 +19,13 @@ public class ProductResponseDto
     public string? SubcategorySlug { get; set; }            // slug for URL filtering
     public int? BrandId { get; set; }
     public string? Brand { get; set; }                      // flat brand name
-    /// <summary>Average rating computed from Reviews (1–5). Defaults to 4.5 when no reviews exist.</summary>
+    /// <summary>Average rating computed dynamically from Reviews (0.0 - 5.0).</summary>
+    public double AverageRating { get; set; }
+
+    /// <summary>Total number of reviews submitted for this product.</summary>
+    public int ReviewCount { get; set; }
+
+    /// <summary>Backward compatibility alias for AverageRating.</summary>
     public double Rating { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }

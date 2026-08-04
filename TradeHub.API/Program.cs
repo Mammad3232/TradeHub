@@ -207,6 +207,12 @@ using (var scope = app.Services.CreateScope())
                 "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Products]') AND name = 'OldPrice') " +
                 "ALTER TABLE [Products] ADD [OldPrice] decimal(18,2) NULL;");
             await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Products]') AND name = 'AverageRating') " +
+                "ALTER TABLE [Products] ADD [AverageRating] float NOT NULL DEFAULT 0.0;");
+            await db.Database.ExecuteSqlRawAsync(
+                "IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID(N'[Products]') AND name = 'ReviewCount') " +
+                "ALTER TABLE [Products] ADD [ReviewCount] int NOT NULL DEFAULT 0;");
+            await db.Database.ExecuteSqlRawAsync(
                 "IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SiteSettings') " +
                 "CREATE TABLE [SiteSettings] (" +
                 "[Id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY, " +

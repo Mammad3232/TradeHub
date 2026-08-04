@@ -62,14 +62,11 @@ public class ProductRepository : IProductRepository
         if (brandIdList is { Count: > 0 })
             query = query.Where(p => p.BrandId.HasValue && brandIdList.Contains(p.BrandId.Value));
 
-        // Rating filter — based on average of product Reviews (if any),
-        // else fallback default rating of 4.5
+        // Rating filter — based on stored AverageRating of product
         if (minRating.HasValue)
         {
             var floor = minRating.Value;
-            query = query.Where(p =>
-                (!p.Reviews.Any() && 4.5 >= floor) ||
-                (p.Reviews.Any() && p.Reviews.Average(r => (double)r.Rating) >= floor));
+            query = query.Where(p => p.AverageRating >= floor);
         }
 
         return await query.OrderByDescending(p => p.CreatedAt).ToListAsync();
@@ -81,6 +78,7 @@ public class ProductRepository : IProductRepository
             .Include(p => p.Category)
             .Include(p => p.Subcategory)
             .Include(p => p.Brand)
+            .Include(p => p.Reviews)
             .FirstOrDefaultAsync(p => p.Id == id && p.IsActive);
 
     public async Task<Product> CreateAsync(Product product)

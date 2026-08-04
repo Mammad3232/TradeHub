@@ -244,26 +244,50 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen,
               </h2>
 
               {/* Rating */}
-              <div className="flex items-center gap-1.5">
-                <div className="flex items-center gap-0.5">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className={`h-4 w-4 ${
-                        star <= Math.round(rating)
-                          ? 'fill-amber-400 text-amber-400'
-                          : 'fill-slate-700 text-slate-700'
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="text-xs font-bold text-slate-300 ml-1">
-                  {rating.toFixed(1)}
-                </span>
-                <span className="text-xs text-slate-500">
-                  ({t('product.reviews') || 'verified reviews'})
-                </span>
-              </div>
+              {(() => {
+                const count = displayProduct.reviewCount ?? 0;
+                const avg = count > 0 ? (displayProduct.averageRating ?? displayProduct.rating ?? 0) : 0;
+                if (count === 0) {
+                  return (
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-0.5">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} className="h-4 w-4 fill-slate-800 text-slate-700" />
+                        ))}
+                      </div>
+                      <span className="text-xs text-slate-500 font-medium ml-1">0 (No reviews)</span>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const fillPercentage = Math.max(0, Math.min(100, (avg - (star - 1)) * 100));
+                        return (
+                          <div key={star} className="relative h-4 w-4 flex-shrink-0">
+                            <Star className="absolute inset-0 h-4 w-4 fill-slate-800 text-slate-700" />
+                            {fillPercentage > 0 && (
+                              <div
+                                className="absolute inset-0 overflow-hidden"
+                                style={{ width: `${fillPercentage}%` }}
+                              >
+                                <Star className="h-4 w-4 fill-amber-400 text-amber-400 min-w-[16px]" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <span className="text-xs font-bold text-amber-400 ml-1">
+                      {avg.toFixed(1)}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      ({count} {count === 1 ? 'review' : 'reviews'})
+                    </span>
+                  </div>
+                );
+              })()}
 
               {/* Price */}
               <div className="flex items-center gap-3">

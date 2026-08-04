@@ -32,22 +32,51 @@ interface ProductCardProps {
   product: Product;
 }
 
-// ── Star Rating ───────────────────────────────────────────────────────────────
+// ── Dynamic Star Rating ────────────────────────────────────────────────────────
+interface StarRatingProps {
+  rating?: number;
+  reviewCount?: number;
+}
 
-const StarRating: React.FC<{ rating: number }> = ({ rating }) => {
+const StarRating: React.FC<StarRatingProps> = ({ rating = 0, reviewCount = 0 }) => {
+  const count = reviewCount ?? 0;
+  const avg = count > 0 ? (rating ?? 0) : 0;
+
+  if (count === 0) {
+    return (
+      <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star key={star} className="h-3.5 w-3.5 fill-slate-800 text-slate-700" />
+          ))}
+        </div>
+        <span className="ml-1 text-xs text-slate-500 font-medium">0 (No reviews)</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          className={`h-3.5 w-3.5 ${
-            star <= Math.round(rating)
-              ? 'fill-amber-400 text-amber-400'
-              : 'fill-slate-700 text-slate-700'
-          }`}
-        />
-      ))}
-      <span className="ml-1.5 text-xs font-semibold text-slate-300">{rating.toFixed(1)}</span>
+    <div className="flex items-center gap-1">
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => {
+          const fillPercentage = Math.max(0, Math.min(100, (avg - (star - 1)) * 100));
+          return (
+            <div key={star} className="relative h-3.5 w-3.5 flex-shrink-0">
+              <Star className="absolute inset-0 h-3.5 w-3.5 fill-slate-800 text-slate-700" />
+              {fillPercentage > 0 && (
+                <div
+                  className="absolute inset-0 overflow-hidden"
+                  style={{ width: `${fillPercentage}%` }}
+                >
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400 min-w-[14px]" />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <span className="ml-1 text-xs font-bold text-amber-400">{avg.toFixed(1)}</span>
+      <span className="text-xs text-slate-500 font-normal">({count})</span>
     </div>
   );
 };
@@ -170,8 +199,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </Link>
         </h3>
 
-        {/* Star rating */}
-        <StarRating rating={product.rating} />
+        {/* Dynamic Star rating */}
+        <StarRating rating={product.averageRating ?? product.rating} reviewCount={product.reviewCount} />
 
         {/* Price row */}
         <div className="flex items-end justify-between mt-auto pt-2 border-t border-slate-800/80">

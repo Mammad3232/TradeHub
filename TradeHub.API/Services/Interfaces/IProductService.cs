@@ -18,4 +18,5 @@ public interface IProductService
     Task<ProductResponseDto> CreateAsync(CreateProductDto dto);
     Task<ProductResponseDto> UpdateAsync(int id, UpdateProductDto dto);
     Task DeleteAsync(int id);
+    Task<ProductResponseDto> AddReviewAsync(int productId, int userId, TradeHub.API.DTOs.Reviews.CreateReviewDto dto);
 }

@@ -29,6 +29,7 @@ import { LegalPage } from './pages/LegalPage';
 import { HelpPage } from './pages/HelpPage';
 import { CareersPage } from './pages/CareersPage';
 import { BlogPage } from './pages/BlogPage';
+import { BlogPostDetail } from './pages/BlogPostDetail';
 import { CategoryPage } from './pages/CategoryPage';
 import { SearchResultsPage } from './pages/SearchResultsPage';
 import { AdminRoute } from './components/AdminRoute';
@@ -336,6 +337,7 @@ function App() {
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/careers" element={<CareersPage />} />
                   <Route path="/blog" element={<BlogPage />} />
+                  <Route path="/blog/:id" element={<BlogPostDetail />} />
                   <Route path="/press" element={<BlogPage />} />
                   <Route path="/help" element={<HelpPage />} />
                   <Route path="/privacy" element={<LegalPage type="privacy" />} />

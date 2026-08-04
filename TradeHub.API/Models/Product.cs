@@ -28,6 +28,16 @@ public class Product
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public bool IsActive { get; set; } = true;
 
+    /// <summary>
+    /// Average star rating (0.0 - 5.0) calculated dynamically from customer reviews.
+    /// </summary>
+    public double AverageRating { get; set; } = 0.0;
+
+    /// <summary>
+    /// Total number of customer reviews submitted for this product.
+    /// </summary>
+    public int ReviewCount { get; set; } = 0;
+
     // Navigation properties
     public Category Category { get; set; } = null!;
     public Subcategory? Subcategory { get; set; }

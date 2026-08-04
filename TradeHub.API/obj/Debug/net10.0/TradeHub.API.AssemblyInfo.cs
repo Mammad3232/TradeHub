@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TradeHub.API")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+75bde767734a9d9e7dc43875290a5f67740fb9dc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0266b5aef6d4316b2034941671216903c3624b5c")]
 [assembly: System.Reflection.AssemblyProductAttribute("TradeHub.API")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TradeHub.API")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

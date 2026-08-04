@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using TradeHub.API.Data;
 using TradeHub.API.DTOs.Products;
 using TradeHub.API.Models;
 using TradeHub.API.Repositories.Interfaces;
@@ -13,19 +15,22 @@ public class ProductService : IProductService
     private readonly IBrandRepository _brandRepo;
     private readonly IWebHostEnvironment _env;
     private readonly IStockAlertService _stockAlertService;
+    private readonly AppDbContext _db;
 
     public ProductService(
         IProductRepository productRepo,
         ICategoryRepository categoryRepo,
         IBrandRepository brandRepo,
         IWebHostEnvironment env,
-        IStockAlertService stockAlertService)
+        IStockAlertService stockAlertService,
+        AppDbContext db)
     {
         _productRepo = productRepo;
         _categoryRepo = categoryRepo;
         _brandRepo = brandRepo;
         _env = env;
         _stockAlertService = stockAlertService;
+        _db = db;
     }
 
     public async Task<IEnumerable<ProductResponseDto>> GetAllAsync(
@@ -124,6 +129,8 @@ public class ProductService : IProductService
             BrandId = dto.BrandId,
             LowStockThreshold = dto.LowStockThreshold > 0 ? dto.LowStockThreshold : null,
             IsActive = true,
+            AverageRating = 0.0,
+            ReviewCount = 0,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -189,6 +196,37 @@ public class ProductService : IProductService
         await _productRepo.SoftDeleteAsync(product.Id);
     }
 
+    public async Task<ProductResponseDto> AddReviewAsync(int productId, int userId, TradeHub.API.DTOs.Reviews.CreateReviewDto dto)
+    {
+        var product = await _productRepo.GetByIdAsync(productId)
+            ?? throw new KeyNotFoundException($"Product with ID {productId} was not found.");
+
+        if (dto.Rating < 1 || dto.Rating > 5)
+            throw new ArgumentException("Rating must be between 1 and 5 stars.");
+
+        var review = new Review
+        {
+            ProductId = productId,
+            UserId = userId,
+            Rating = dto.Rating,
+            Comment = dto.Comment?.Trim(),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Reviews.Add(review);
+        await _db.SaveChangesAsync();
+
+        // Recalculate average rating & review count for the product
+        var productReviews = await _db.Reviews.Where(r => r.ProductId == productId).ToListAsync();
+        product.ReviewCount = productReviews.Count;
+        product.AverageRating = productReviews.Count > 0
+            ? Math.Round(productReviews.Average(r => (double)r.Rating), 1)
+            : 0.0;
+
+        await _db.SaveChangesAsync();
+        return MapToDto(product);
+    }
+
     private static ProductResponseDto MapToDto(Product p) => new()
     {
         Id = p.Id,
@@ -205,10 +243,9 @@ public class ProductService : IProductService
         SubcategorySlug = p.Subcategory?.Slug,
         BrandId = p.BrandId,
         Brand = p.Brand?.Name,
-        // Compute real average from reviews; fall back to 4.5 if no reviews yet
-        Rating = p.Reviews is { Count: > 0 }
-            ? Math.Round(p.Reviews.Average(r => (double)r.Rating), 1)
-            : 4.5,
+        AverageRating = p.AverageRating,
+        ReviewCount = p.ReviewCount,
+        Rating = p.AverageRating,
         IsActive = p.IsActive,
         CreatedAt = p.CreatedAt,
         LowStockThreshold = p.LowStockThreshold,

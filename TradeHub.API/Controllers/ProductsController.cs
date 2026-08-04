@@ -128,6 +128,44 @@ public class ProductsController : ControllerBase
         return Ok(ApiResponse.Ok("Product deleted successfully."));
     }
 
+    /// <summary>Submit a review (1–5 star rating with optional comment) for a product.</summary>
+    [HttpPost("{id:int}/reviews")]
+    [Authorize]
+    [ProducesResponseType(typeof(ApiResponse<ProductResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddReview(int id, [FromBody] TradeHub.API.DTOs.Reviews.CreateReviewDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            var errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage);
+            return BadRequest(ApiResponse.Fail("Validation failed.", errors));
+        }
+
+        try
+        {
+            var userId = GetCurrentUserId();
+            var updatedProduct = await _productService.AddReviewAsync(id, userId, dto);
+            return Ok(ApiResponse<ProductResponseDto>.Ok(updatedProduct, "Review submitted successfully."));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse.Fail(ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ApiResponse.Fail(ex.Message));
+        }
+    }
+
+    private int GetCurrentUserId()
+    {
+        var claim = User.FindFirst("userId") ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+        if (claim is null || !int.TryParse(claim.Value, out var id))
+            throw new UnauthorizedAccessException("User identification token claim is missing or invalid.");
+        return id;
+    }
+
     // ── Tracking & Recommendations ────────────────────────────────────────────────
 
     /// <summary>

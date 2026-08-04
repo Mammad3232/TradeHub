@@ -23,6 +23,8 @@ export interface Product {
   brandId?: number | null;
   brand?: string | null;
   rating: number;
+  averageRating?: number;
+  reviewCount?: number;
   isActive: boolean;
   createdAt: string;
   vendorName?: string;
@@ -174,4 +176,13 @@ export const getRecentlyViewed = async (excludeProductId?: number): Promise<Prod
     console.error('Failed to fetch recently viewed products:', error);
     return [];
   }
+};
+
+export interface CreateReviewInput {
+  rating: number;
+  comment?: string;
+}
+
+export const submitReview = async (productId: number, input: CreateReviewInput): Promise<Product> => {
+  return await apiClient.post<never, Product>(`/products/${productId}/reviews`, input);
 };
