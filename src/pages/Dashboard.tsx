@@ -1,8 +1,10 @@
 import React from 'react';
-import productsData from '../mocks/products.json';
 import { DollarSign, Package, ShoppingCart, TrendingUp, Plus, Edit, Trash } from 'lucide-react';
+import { useProductContext } from '../context/ProductContext';
 
 export const Dashboard: React.FC = () => {
+  const { products } = useProductContext();
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       {/* Header section */}
@@ -48,8 +50,8 @@ export const Dashboard: React.FC = () => {
         <div className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex items-center justify-between">
           <div className="space-y-1">
             <span className="text-xs text-slate-400 font-medium">Active Products</span>
-            <p className="text-2xl font-bold text-white">18</p>
-            <span className="text-xs text-slate-500">2 pending review</span>
+            <p className="text-2xl font-bold text-white">{products.length}</p>
+            <span className="text-xs text-slate-500">Live in Marketplace</span>
           </div>
           <div className="bg-purple-500/10 p-3 rounded-xl">
             <Package className="h-6 w-6 text-purple-400" />
@@ -86,16 +88,16 @@ export const Dashboard: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-sm text-slate-300">
-              {productsData.map((product) => (
+              {products.map((product) => (
                 <tr key={product.id} className="hover:bg-slate-950/20 transition-colors">
                   <td className="px-6 py-4 flex items-center space-x-3">
                     <img
-                      src={product.image}
-                      alt={product.title}
+                      src={product.image || product.imageUrl || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80'}
+                      alt={product.title || product.name}
                       className="h-10 w-10 rounded-lg object-cover bg-slate-950 border border-slate-800"
                     />
                     <div>
-                      <span className="font-semibold text-white block">{product.title}</span>
+                      <span className="font-semibold text-white block">{product.title || product.name}</span>
                       <span className="text-xs text-slate-500">ID: {product.id}</span>
                     </div>
                   </td>
@@ -104,8 +106,8 @@ export const Dashboard: React.FC = () => {
                       {product.category}
                     </span>
                   </td>
-                  <td className="px-6 py-4 font-medium">{product.vendorName}</td>
-                  <td className="px-6 py-4 font-bold text-white">${product.price.toFixed(2)}</td>
+                  <td className="px-6 py-4 font-medium">{product.vendorName || product.brand || 'TradeHub Vendor'}</td>
+                  <td className="px-6 py-4 font-bold text-white">${(typeof product.price === 'number' ? product.price : parseFloat(product.price) || 0).toFixed(2)}</td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end space-x-2">
                       <button className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg transition-colors">

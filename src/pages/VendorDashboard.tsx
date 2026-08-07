@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { patchStoredProduct, removeStoredProduct } from '../utils/productStorage';
+import { getImageUrl } from '../services/productService';
 import {
   LayoutDashboard, Package, ShoppingCart, TrendingUp, Settings, LogOut,
   DollarSign, Users, ArrowUpRight, ArrowDownRight, Pencil, Trash2, Plus,
   X, Check, CreditCard, Building2, Mail, Store, Eye, AlertCircle,
   CheckCircle2, Activity, Percent, Save, UploadCloud, AtSign, Share2,
-  Globe, Loader2, Calendar, MapPin, Clock, ChevronRight, Truck, Image as ImageIcon,
+  Globe, Loader2, Calendar, MapPin, Clock, ChevronRight, Truck, Image as ImageIcon, Search,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RecentOrdersTable } from '../components/RecentOrdersTable';
@@ -18,12 +20,30 @@ interface Product {
   id: number;
   name: string;
   category: string;
+  subcategory?: string;
+  brand?: string;
   price: number;
   stock: number;
+  lowStockThreshold?: number;
   status: ProductStatus;
   image: string;
   description: string;
 }
+
+const SUBCATEGORIES_MAP: Record<string, string[]> = {
+  'Electronics': ['Phones & Tablets', 'Computers & Laptops', 'Home Appliances', 'Audio & Gadgets'],
+  'Fashion': ["Men's Clothing", "Women's Clothing", 'Shoes & Sneakers', 'Accessories'],
+  'Home Decor': ['Furniture', 'Lighting', 'Kitchenware', 'Textiles & Bedding'],
+  'Furniture': ['Chairs & Sofas', 'Tables & Desks', 'Beds & Wardrobes', 'Outdoor Furniture'],
+  'Books': ['Fiction & Novels', 'Sci-Fi & Fantasy', 'Personal Dev.', 'Kids Books'],
+  'Fitness': ['Gym Equipment', 'Sportswear', 'Supplements', 'Smart Wearables'],
+  'Beverages': ['Hot Drinks', 'Cold Drinks', 'Energy Drinks', 'Organic Juices'],
+};
+
+const BRANDS_LIST = [
+  'Generic / Unbranded', 'Apple', 'Samsung', 'Sony', 'Bose', 'Dyson', 'Logitech', 'LG',
+  'Nike', 'Adidas', 'Zara', 'H&M', 'Casio', 'IKEA', 'Philips', 'Starbucks'
+];
 
 interface OrderItem { emoji: string; name: string; qty: number; price: number; }
 interface Order {
@@ -93,6 +113,21 @@ const orderTimelineSteps: Record<OrderStatus, number> = {
 
 const inputCls = 'w-full bg-[#0B1120] border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40 focus:border-purple-500/60 transition-all';
 
+const isImageSrc = (img?: string) => {
+  if (!img) return false;
+  if (img === '📦' || [...img].length <= 2) return false;
+  return (
+    img.startsWith('data:image/') ||
+    img.startsWith('http://') ||
+    img.startsWith('https://') ||
+    img.startsWith('/') ||
+    img.startsWith('blob:') ||
+    img.startsWith('uploads/') ||
+    img.includes('/') ||
+    img.includes('.')
+  );
+};
+
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 export const VendorDashboard: React.FC = () => {
@@ -105,12 +140,58 @@ export const VendorDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState('Dashboard');
 
   // ── Products
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(() => {
+    try {
+      const stored = localStorage.getItem('tradehub_products') || localStorage.getItem('vendora_vendor_products');
+      if (stored && stored !== "[]") {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          let deletedIds: number[] = [];
+          try {
+            const delRaw = localStorage.getItem('vendora_deleted_product_ids');
+            if (delRaw) deletedIds = JSON.parse(delRaw);
+          } catch {}
+
+          return parsed
+            .filter((p: any) => !deletedIds.includes(p.id))
+            .map((p: any) => ({
+              id: p.id,
+              name: p.name || p.title || 'Product',
+              category: p.category || 'Electronics',
+              subcategory: p.subcategory || '',
+              brand: p.brand || '',
+              price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+              stock: typeof p.stock === 'number' ? p.stock : (p.stockQuantity ?? 0),
+              lowStockThreshold: p.lowStockThreshold,
+              status: p.status || (p.stock === 0 || p.stockQuantity === 0 ? 'Out of Stock' : 'Active'),
+              image: p.image || p.imageUrl || p.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500',
+              description: p.description || '',
+            }));
+        }
+      }
+    } catch {}
+    try {
+      localStorage.setItem('tradehub_products', JSON.stringify(INITIAL_PRODUCTS));
+    } catch {}
+    return INITIAL_PRODUCTS;
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const filteredProducts = products.filter((p) =>
+    p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())
+  );
   const [showProductModal, setShowProductModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState({
-    name: '', category: 'Electronics', price: '', stock: '',
-    status: 'Active' as ProductStatus, image: '📦', description: '',
+    name: '',
+    category: 'Electronics',
+    subcategory: 'Audio & Gadgets',
+    brand: 'Generic / Unbranded',
+    price: '',
+    stock: '',
+    lowStockThreshold: '5',
+    status: 'Active' as ProductStatus,
+    image: '📦',
+    description: '',
   });
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -206,36 +287,301 @@ export const VendorDashboard: React.FC = () => {
     fetchVendorSettings();
   }, []);
 
+  // Listen for storage changes across tabs & components
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      try {
+        const saved = localStorage.getItem('tradehub_products') || localStorage.getItem('vendora_vendor_products');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            let deletedIds: number[] = [];
+            try {
+              const delRaw = localStorage.getItem('vendora_deleted_product_ids');
+              if (delRaw) deletedIds = JSON.parse(delRaw);
+            } catch {}
+
+            setProducts(
+              parsed
+                .filter((p: any) => !deletedIds.includes(p.id))
+                .map((p: any) => ({
+                  id: p.id,
+                  name: p.name || p.title || 'Product',
+                  category: p.category || 'Electronics',
+                  subcategory: p.subcategory || '',
+                  brand: p.brand || '',
+                  price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+                  stock: typeof p.stock === 'number' ? p.stock : (p.stockQuantity ?? 0),
+                  lowStockThreshold: p.lowStockThreshold,
+                  status: p.status || (p.stock === 0 || p.stockQuantity === 0 ? 'Out of Stock' : 'Active'),
+                  image: p.image || p.imageUrl || p.img || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500',
+                  description: p.description || '',
+                }))
+            );
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('productsUpdated', handleStorageUpdate);
+    window.addEventListener('tradehub-storage-update', handleStorageUpdate);
+    window.addEventListener('tradehub:products-changed', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('productsUpdated', handleStorageUpdate);
+      window.removeEventListener('tradehub-storage-update', handleStorageUpdate);
+      window.removeEventListener('tradehub:products-changed', handleStorageUpdate);
+    };
+  }, []);
+
+/**
+ * Compresses an image file using an HTML5 <canvas> element.
+ * Resizes to a maximum dimension of 400px (width or height)
+ * and exports as a JPEG with quality 0.6 (~15-30 KB Base64).
+ */
+const compressImageFile = (file: File, maxDim = 400, quality = 0.6): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (!file.type.startsWith('image/')) {
+      reject(new Error('File is not an image'));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Failed to load image element'));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Canvas 2D context unavailable'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedBase64);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
+  // ─── Image File Upload Handler (Canvas Compressed Base64) ────────────────
+  const processImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    try {
+      const compressedBase64 = await compressImageFile(file, 400, 0.6);
+      setProductForm((f) => ({ ...f, image: compressedBase64 }));
+    } catch (err) {
+      console.warn('Canvas compression fallback to standard FileReader:', err);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setProductForm((f) => ({ ...f, image: result }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processImageFile(e.target.files[0]);
+    }
+  };
+
+  const handleDropImage = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      processImageFile(e.dataTransfer.files[0]);
+    }
+  };
+
   // ─── Handlers ──────────────────────────────────────────────────────────────
 
   const openAddModal = () => {
     setEditingProduct(null);
-    setProductForm({ name: '', category: 'Electronics', price: '', stock: '', status: 'Active', image: '📦', description: '' });
+    setProductForm({
+      name: '',
+      category: 'Electronics',
+      subcategory: SUBCATEGORIES_MAP['Electronics']?.[0] ?? 'Audio & Gadgets',
+      brand: 'Generic / Unbranded',
+      price: '',
+      stock: '',
+      lowStockThreshold: '5',
+      status: 'Active',
+      image: '📦',
+      description: '',
+    });
     setShowProductModal(true);
   };
 
   const openEditModal = (p: Product) => {
     setEditingProduct(p);
-    setProductForm({ name: p.name, category: p.category, price: String(p.price), stock: String(p.stock), status: p.status, image: p.image, description: p.description });
+    setProductForm({
+      name: p.name,
+      category: p.category || 'Electronics',
+      subcategory: p.subcategory || (SUBCATEGORIES_MAP[p.category || 'Electronics']?.[0] ?? 'Audio & Gadgets'),
+      brand: p.brand || 'Generic / Unbranded',
+      price: String(p.price),
+      stock: String(p.stock),
+      lowStockThreshold: p.lowStockThreshold !== undefined ? String(p.lowStockThreshold) : '5',
+      status: p.status,
+      image: p.image,
+      description: p.description,
+    });
     setShowProductModal(true);
   };
 
-  const handleProductSave = () => {
-    if (!productForm.name.trim() || !productForm.price) return;
-    const parsed: Product = {
-      id: editingProduct?.id ?? Date.now(),
-      name: productForm.name, category: productForm.category,
-      price: parseFloat(productForm.price), stock: parseInt(productForm.stock) || 0,
-      status: productForm.status, image: productForm.image, description: productForm.description,
-    };
-    setProducts(ps => editingProduct ? ps.map(p => p.id === editingProduct.id ? parsed : p) : [parsed, ...ps]);
-    setShowProductModal(false);
+  const handleProductSave = (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
+
+    try {
+      if (!productForm.name.trim()) {
+        alert('Please enter a product name.');
+        return;
+      }
+
+      const numericPrice = parseFloat(productForm.price) || 0;
+      if (numericPrice <= 0 && productForm.price !== '0') {
+        alert('Please enter a valid product price.');
+        return;
+      }
+
+      const numericStock = parseInt(productForm.stock, 10) || 0;
+      const numericThreshold =
+        productForm.lowStockThreshold !== ''
+          ? parseInt(productForm.lowStockThreshold, 10) || 0
+          : 0;
+
+      const DEFAULT_PLACEHOLDER =
+        'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+
+      let safeImage = productForm.image || '📦';
+      if (typeof safeImage === 'string' && safeImage.startsWith('data:image/')) {
+        if (safeImage.length > 500000) {
+          console.warn('Uploaded Base64 image is too large (>500KB), falling back to standard placeholder image URL.');
+          safeImage = DEFAULT_PLACEHOLDER;
+        }
+      }
+
+      const parsed: Product = {
+        id: editingProduct?.id ?? Date.now(),
+        name: productForm.name.trim(),
+        category: productForm.category,
+        subcategory: productForm.subcategory || undefined,
+        brand: productForm.brand || undefined,
+        price: numericPrice,
+        stock: numericStock,
+        lowStockThreshold: numericThreshold,
+        status: productForm.status,
+        image: safeImage,
+        description: productForm.description,
+      };
+
+      setProducts((prev) => {
+        const updated = editingProduct
+          ? prev.map((p) => (p.id === editingProduct.id ? parsed : p))
+          : [parsed, ...prev];
+
+        const isImageData = (img: string) =>
+          img &&
+          (img.startsWith('data:image/') ||
+           img.startsWith('http://') ||
+           img.startsWith('https://') ||
+           img.startsWith('/') ||
+           img.startsWith('blob:'));
+
+        const mapStorable = (items: Product[], fallbackLargeImages = false) =>
+          items.map((p) => {
+            const hasImg = isImageData(p.image);
+            const imgVal = hasImg
+              ? fallbackLargeImages && p.image.startsWith('data:image/')
+                ? DEFAULT_PLACEHOLDER
+                : p.image
+              : '';
+            return {
+              id: p.id,
+              title: p.name,
+              name: p.name,
+              category: p.category,
+              subcategory: p.subcategory ?? null,
+              brand: p.brand ?? 'Generic',
+              price: p.price,
+              stock: p.stock,
+              stockQuantity: p.stock,
+              lowStockThreshold: p.lowStockThreshold,
+              status: p.status,
+              image: imgVal,
+              imageUrl: imgVal,
+              img: imgVal,
+              description: p.description,
+              rating: 4.5,
+              averageRating: 4.5,
+              reviewCount: 0,
+              isNew: true,
+              vendorName: 'Vendor Store',
+              isActive: p.status === 'Active',
+            };
+          });
+
+        // Use patchStoredProduct so only this product is upserted in the
+        // full tradehub_products list — other products are never touched.
+        try {
+          const storableItem = mapStorable([parsed], false)[0];
+          patchStoredProduct(storableItem);
+        } catch (storageErr) {
+          console.warn('LocalStorage quota error, retrying with placeholder image:', storageErr);
+          try {
+            const storableItemFallback = mapStorable([parsed], true)[0];
+            patchStoredProduct(storableItemFallback);
+          } catch (retryErr) {
+            console.error('Failed to patch localStorage even with fallback image:', retryErr);
+          }
+        }
+        // broadcastChange() is called inside patchStoredProduct automatically.
+
+        return updated;
+      });
+
+      setShowProductModal(false);
+    } catch (error) {
+      console.error('Add Product Error:', error);
+      alert(`Failed to save product: ${(error as Error)?.message || 'An unexpected error occurred.'}`);
+    }
   };
 
   const handleDeleteProduct = (id: number) => {
-    setProducts(ps => ps.filter(p => p.id !== id));
+    // removeStoredProduct handles the deny-list AND removes from the full
+    // tradehub_products list without touching any other products.
+    removeStoredProduct(id);
+
+    setProducts((prev) => prev.filter((p) => p.id !== id));
     setDeleteConfirmId(null);
   };
+
 
   const handleOrderStatusChange = (orderId: string, status: OrderStatus) =>
     setOrders(os => os.map(o => o.id === orderId ? { ...o, status } : o));
@@ -410,12 +756,6 @@ export const VendorDashboard: React.FC = () => {
             <p className="text-xs text-slate-400">Vendora Vendor Portal · {settings.storeName}</p>
           </div>
           <div className="flex items-center gap-3">
-            {activeTab === 'Products' && (
-              <button type="button" onClick={openAddModal}
-                className="hidden sm:inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-purple-600/20 cursor-pointer">
-                <Plus className="w-4 h-4" /> Add Product
-              </button>
-            )}
             {settings.logoUrl ? (
               <img
                 src={settings.logoUrl}
@@ -472,15 +812,27 @@ export const VendorDashboard: React.FC = () => {
           {/* ══════════ PRODUCTS ══════════ */}
           {activeTab === 'Products' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-white">Product Catalog</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{products.length} items · {products.filter(p => p.stock === 0).length} out of stock</p>
+                  <p className="text-xs text-slate-400 mt-0.5">{products.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())).length} of {products.length} items · {products.filter(p => p.stock === 0).length} out of stock</p>
                 </div>
-                <button type="button" onClick={openAddModal}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-purple-600/20 cursor-pointer">
-                  <Plus className="w-4 h-4" /> Add Product
-                </button>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <input
+                      type="text"
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="bg-[#111827] border border-slate-700 text-white text-xs rounded-xl pl-9 pr-4 py-2 focus:outline-none focus:border-purple-500 placeholder:text-slate-500 w-48 sm:w-64 transition-all"
+                    />
+                  </div>
+                  <button type="button" onClick={openAddModal}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold rounded-xl transition-colors shadow-lg shadow-purple-600/20 cursor-pointer whitespace-nowrap">
+                    <Plus className="w-4 h-4" /> Add Product
+                  </button>
+                </div>
               </div>
 
               <div className="bg-[#111827] rounded-2xl border border-slate-800/80 overflow-x-auto">
@@ -493,11 +845,22 @@ export const VendorDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {products.map((p, i) => (
-                      <tr key={p.id} className={`border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors ${i === products.length - 1 ? 'border-b-0' : ''}`}>
+                    {products.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())).map((p, i) => (
+                      <tr key={p.id} className={`border-b border-slate-800/40 hover:bg-slate-800/20 transition-colors ${i === products.filter((p) => p.name.toLowerCase().includes(searchQuery.toLowerCase().trim())).length - 1 ? 'border-b-0' : ''}`}>
                         <td className="px-5 py-4">
                           <div className="flex items-center gap-3">
-                            <span className="text-2xl">{p.image}</span>
+                            {isImageSrc(p.image) ? (
+                              <img
+                                src={getImageUrl(p.image) || p.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500'}
+                                alt={p.name}
+                                className="w-10 h-10 rounded-xl object-cover bg-slate-900 border border-slate-800 flex-shrink-0"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+                                }}
+                              />
+                            ) : (
+                              <span className="text-2xl flex-shrink-0">{p.image || '📦'}</span>
+                            )}
                             <div>
                               <p className="font-semibold text-white text-sm">{p.name}</p>
                               <p className="text-[11px] text-slate-500 line-clamp-1 max-w-[200px]">{p.description}</p>
@@ -1078,94 +1441,206 @@ export const VendorDashboard: React.FC = () => {
 
       {/* ══════════ PRODUCT MODAL ══════════ */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={() => setShowProductModal(false)} />
-          <div className="relative bg-[#0E1524] border border-slate-700/80 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md overflow-y-auto">
+          <form
+            onSubmit={handleProductSave}
+            className="relative w-full max-w-2xl bg-[#0B1120] border border-slate-800 rounded-3xl shadow-2xl overflow-hidden my-4 sm:my-6 animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Modal header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60">
-              <h2 className="text-lg font-bold text-white">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
-              <button type="button" onClick={() => setShowProductModal(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors cursor-pointer">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/80 bg-[#0F172A]/50">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                  <Package className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                    {editingProduct ? 'Edit Product' : 'Add New Product'}
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    {editingProduct ? 'Update listing details for your store' : 'Create a listing for your store catalog'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowProductModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-800/50 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-              {/* Image Upload zone */}
+            <div className="p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+              {/* Product Name */}
               <div>
-                <label className="block text-xs font-semibold text-slate-400 mb-2">Product Image</label>
-                <div
-                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={e => { e.preventDefault(); setDragOver(false); }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`flex flex-col items-center justify-center gap-2 h-28 rounded-xl border-2 border-dashed cursor-pointer transition-all ${
-                    dragOver ? 'border-purple-500 bg-purple-500/10' : 'border-slate-700 bg-[#0B1120] hover:border-slate-600 hover:bg-slate-800/30'}`}>
-                  <span className="text-4xl">{productForm.image}</span>
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span className="text-xs">Drag & drop or click to upload</span>
-                  </div>
-                  <span className="text-[10px] text-slate-600">PNG, JPG, WEBP up to 5 MB</span>
-                </div>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" />
-                {/* Emoji quick-pick for demo */}
-                <div className="flex gap-2 mt-2 flex-wrap">
-                  {['📦','🎧','⌨️','🖥️','🪑','👛','⌚','📱','🎮','🖱️'].map(em => (
-                    <button key={em} type="button" onClick={() => setProductForm(f => ({ ...f, image: em }))}
-                      className={`text-lg p-1 rounded-lg transition-colors cursor-pointer ${productForm.image === em ? 'bg-purple-600/30 ring-1 ring-purple-500' : 'hover:bg-slate-800'}`}>
-                      {em}
-                    </button>
-                  ))}
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Product Name *</label>
+                <div className="relative">
+                  <Package className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                  <input type="text" placeholder="e.g. Premium Wireless Earbuds" value={productForm.name}
+                    onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
                 </div>
               </div>
 
-              {/* Form fields */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Product Name *</label>
-                  <input type="text" placeholder="e.g. Premium Wireless Earbuds" value={productForm.name}
-                    onChange={e => setProductForm(f => ({ ...f, name: e.target.value }))} className={inputCls} />
+              {/* Category, Department / Subcategory & Brand — 3 Columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Category</label>
+                  <select value={productForm.category}
+                    onChange={e => {
+                      const newCat = e.target.value;
+                      const defaultSub = SUBCATEGORIES_MAP[newCat]?.[0] ?? '';
+                      setProductForm(f => ({ ...f, category: newCat, subcategory: defaultSub }));
+                    }}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 cursor-pointer appearance-none">
+                    {['Electronics', 'Fashion', 'Home Decor', 'Furniture', 'Fitness', 'Books', 'Beverages'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Department / Subcategory</label>
+                  <select value={productForm.subcategory}
+                    onChange={e => setProductForm(f => ({ ...f, subcategory: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 cursor-pointer appearance-none">
+                    {(SUBCATEGORIES_MAP[productForm.category] || ['General']).map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Brand</label>
+                  <select value={productForm.brand}
+                    onChange={e => setProductForm(f => ({ ...f, brand: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 cursor-pointer appearance-none">
+                    {BRANDS_LIST.map(b => <option key={b} value={b}>{b}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* Price, Stock Quantity & Low Stock Alert — 3 Columns */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Price ($) *</label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
+                    <input type="number" min="0" step="0.01" placeholder="0.00" value={productForm.price}
+                      onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))}
+                      className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl pl-9 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Price ($) *</label>
-                  <input type="number" min="0" step="0.01" placeholder="0.00" value={productForm.price}
-                    onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))} className={inputCls} />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Stock Quantity</label>
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Stock Quantity</label>
                   <input type="number" min="0" placeholder="0" value={productForm.stock}
-                    onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))} className={inputCls} />
+                    onChange={e => setProductForm(f => ({ ...f, stock: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Category</label>
-                  <select value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))} className={`${inputCls} cursor-pointer`}>
-                    {['Electronics', 'Fashion', 'Home Decor', 'Furniture', 'Fitness', 'Books', 'Beverages'].map(c => <option key={c}>{c}</option>)}
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Low Stock Alert</label>
+                  <input type="number" min="0" placeholder="e.g. 5" value={productForm.lowStockThreshold}
+                    onChange={e => setProductForm(f => ({ ...f, lowStockThreshold: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors" />
+                </div>
+              </div>
+
+              {/* Status & Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Status</label>
+                  <select value={productForm.status} onChange={e => setProductForm(f => ({ ...f, status: e.target.value as ProductStatus }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors cursor-pointer appearance-none">
+                    <option value="Active">Active</option><option value="Draft">Draft</option><option value="Out of Stock">Out of Stock</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Status</label>
-                  <select value={productForm.status} onChange={e => setProductForm(f => ({ ...f, status: e.target.value as ProductStatus }))} className={`${inputCls} cursor-pointer`}>
-                    <option>Active</option><option>Draft</option><option>Out of Stock</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs font-semibold text-slate-400 mb-1.5">Description</label>
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">Description</label>
                   <textarea rows={2} placeholder="Short product description..." value={productForm.description}
-                    onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} className={`${inputCls} resize-none`} />
+                    onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))}
+                    className="w-full bg-[#151C2C] border border-slate-700/70 rounded-xl px-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-colors resize-none" />
                 </div>
+              </div>
+
+              {/* Image Upload zone (with FileReader & Thumbnail Preview) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
+                  Product Image
+                </label>
+                {isImageSrc(productForm.image) ? (
+                  <div className="relative rounded-2xl overflow-hidden border border-slate-700 bg-slate-900 group h-36 flex items-center justify-center">
+                    <img
+                      src={productForm.image}
+                      alt="Product Preview"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-slate-950/75 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          fileInputRef.current?.click();
+                        }}
+                        className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                      >
+                        Change Image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductForm((f) => ({ ...f, image: '📦' }));
+                        }}
+                        className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDropImage}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-4 text-center transition-all cursor-pointer ${
+                      dragOver
+                        ? 'border-purple-500 bg-purple-500/10'
+                        : 'border-slate-800 hover:border-slate-700 bg-[#151C2C]/50'
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center mx-auto mb-1.5 text-purple-400">
+                      <span className="text-xl">{productForm.image || '📦'}</span>
+                    </div>
+                    <div className="flex items-center justify-center gap-1.5 text-slate-300 text-xs font-medium">
+                      <UploadCloud className="w-4 h-4 text-purple-400" />
+                      <span>Drag & drop image here or click to browse</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 mt-0.5 block">
+                      Supports PNG, JPG, WEBP up to 5 MB
+                    </span>
+                  </div>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileSelect}
+                  className="hidden"
+                />
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-800/60">
+            {/* Modal footer */}
+            <div className="flex items-center justify-end gap-3 px-6 py-3.5 border-t border-slate-800/80 bg-[#0F172A]/30">
               <button type="button" onClick={() => setShowProductModal(false)}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-colors cursor-pointer">Cancel</button>
-              <button type="button" onClick={handleProductSave}
-                className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold transition-colors shadow-lg shadow-purple-600/20 cursor-pointer">
+                className="px-4 py-2 rounded-xl border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-800/50 text-sm font-semibold transition-colors cursor-pointer">Cancel</button>
+              <button type="submit"
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold shadow-lg shadow-purple-600/25 transition-all duration-200 cursor-pointer">
                 {editingProduct ? 'Save Changes' : 'Add Product'}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
 

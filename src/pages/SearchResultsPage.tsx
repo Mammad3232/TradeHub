@@ -2,13 +2,14 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { Search, ShoppingBag, ArrowLeft, SlidersHorizontal } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
-import mockProducts from '../mocks/products.json';
+import { useProductContext } from '../context/ProductContext';
 import { getProducts, type Product } from '../services/api';
 
 export const SearchResultsPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || searchParams.get('search') || searchParams.get('searchTerm') || '';
   const category = searchParams.get('category') || '';
+  const { products: contextProducts } = useProductContext();
 
   const [sortBy, setSortBy] = useState<string>('relevance');
   const [apiProducts, setApiProducts] = useState<Product[]>([]);
@@ -33,9 +34,15 @@ export const SearchResultsPage: React.FC = () => {
     };
   }, [query, category]);
 
-  // Filter products by Product Name (title) and Category
+  // Filter products by Product Name (title) and Category from single-source ProductContext
   const filteredProducts = useMemo<Product[]>(() => {
-    let list = (apiProducts.length > 0 ? apiProducts : (mockProducts as unknown as Product[]));
+    const baseSource = (contextProducts.length > 0 ? contextProducts : apiProducts) as unknown as Product[];
+    const seen = new Set();
+    let list = baseSource.filter((p) => {
+      if (!p || seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
 
     if (category && category !== 'All') {
       const catLower = category.toLowerCase().trim();

@@ -247,14 +247,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, handleLogin }) => {
             </Link>
           </div>
 
-          {/* Test Credentials banner */}
-          <div className="bg-purple-900/10 border border-purple-500/20 rounded-xl p-3.5 text-[10px] sm:text-xs text-purple-300 space-y-1.5">
-            <p className="font-bold uppercase tracking-wider text-purple-400">Sandbox Test Accounts:</p>
-            <p>Admin/Seller Email: <span className="font-semibold select-all text-white bg-slate-900/60 px-1 py-0.5 rounded font-mono">admin@vendora.store</span></p>
-            <p>Buyer Email: <span className="font-semibold select-all text-white bg-slate-900/60 px-1 py-0.5 rounded font-mono">buyer@vendora.store</span></p>
-            <p>Universal Password: <span className="font-semibold select-all text-white bg-slate-900/60 px-1 py-0.5 rounded font-mono">Password123</span></p>
-          </div>
-
           {/* Error Banner */}
           {error && (
             <div

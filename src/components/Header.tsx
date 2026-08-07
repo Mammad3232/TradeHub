@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import mockProducts from '../mocks/products.json';
 import { getProducts, type Product } from '../services/api';
 import {
   Search,

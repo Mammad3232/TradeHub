@@ -1,4 +1,10 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import {
+  seedProductsIfEmpty,
+  mergeApiProducts,
+  saveStoredProducts,
+  getStoredProducts,
+} from "../utils/productStorage";
 import { Link } from "react-router-dom";
 import {
   Star, ShoppingCart, Heart, Check, Loader2,
@@ -7,6 +13,7 @@ import {
 } from "lucide-react";
 import { useShop } from "../context/ShopContext";
 import { useCurrency } from "../context/CurrencyContext";
+import { useProductContext } from "../context/ProductContext";
 import { useTranslation } from "react-i18next";
 import { QuickViewModal } from "./QuickViewModal";
 import { getProducts } from "../services/api";
@@ -39,7 +46,7 @@ export interface ProductCardItem {
 /* ─── Image resolution helper ────────────────────────────────── */
 const BACKEND_ORIGIN = "http://localhost:5229";
 const PLACEHOLDER =
-  "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80";
+  "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500";
 
 const resolveImage = (raw?: string): string => {
   if (!raw) return PLACEHOLDER;
@@ -112,10 +119,60 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   const { addToCart, toggleWishlist, isWishlisted, pushToast, setMiniCartOpen } =
     useShop();
+  const { products: rawContextProducts, getDepartmentCount } = useProductContext();
   const { formatPrice, symbol } = useCurrency();
   const { t } = useTranslation();
 
-  const [allProducts, setAllProducts] = useState<ProductCardItem[]>([]);
+  /* ── Eagerly hydrate from localStorage so vendor products appear BEFORE API resolves ── */
+  const [allProducts, setAllProducts] = useState<ProductCardItem[]>(() => {
+    try {
+      const raw = localStorage.getItem('tradehub_products');
+      if (!raw) return [];
+      const parsed: any[] = JSON.parse(raw);
+      if (!Array.isArray(parsed) || parsed.length === 0) return [];
+
+      let deletedIds: number[] = [];
+      try {
+        const delRaw = localStorage.getItem('vendora_deleted_product_ids');
+        if (delRaw) deletedIds = JSON.parse(delRaw);
+      } catch {}
+
+      const PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+      const resolveImg = (raw?: string) => {
+        if (!raw) return PLACEHOLDER;
+        if ([...raw].length <= 2) return PLACEHOLDER; // emoji
+        if (raw.startsWith('data:image/') || raw.startsWith('http') || raw.startsWith('/') || raw.startsWith('blob:')) return raw;
+        return `${window.location.origin}/${raw}`;
+      };
+
+      const BLOCKLIST = [/damasnik/i, /elllili/i];
+      return parsed
+        .filter((p: any) => !deletedIds.includes(p.id))
+        .filter((p: any) => !BLOCKLIST.some((rx) => rx.test((p.name ?? p.title ?? '').toString())))
+        .map((p: any): ProductCardItem => {
+          const rawImage = p.imageUrl || p.image_url || p.image || p.img || '';
+          const price = typeof p.price === 'number' ? p.price : parseFloat(String(p.price)) || 0;
+          const rawRating = p.rating ?? p.averageRating ?? 4.5;
+          const rating = typeof rawRating === 'number' && !isNaN(rawRating) ? rawRating : 4.5;
+          return {
+            id: p.id,
+            title: p.title || p.name || 'Unnamed Product',
+            brand: p.brand || p.vendor || p.vendorName || 'Generic',
+            category: p.category || 'Electronics',
+            subcategoryId: p.subcategoryId ?? null,
+            subcategory: p.subcategory ?? null,
+            subcategorySlug: p.subcategorySlug ?? null,
+            price,
+            rating,
+            image: resolveImg(rawImage),
+            stockQuantity: p.stockQuantity ?? p.stock ?? 0,
+            stock: p.stock ?? p.stockQuantity ?? 0,
+          };
+        });
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [addedIds, setAddedIds] = useState<Record<number, boolean>>({});
   const [quickViewProduct, setQuickViewProduct] = useState<ProductCardItem | null>(null);
@@ -245,8 +302,83 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     []
   );
 
-  /* ── Fetch products from API — triggered by filter changes ──── */
-  useEffect(() => {
+  /* ── Helper: resolve image src — handle emoji, Base64, URL ── */
+  const resolveProductImage = useCallback((raw?: string): string => {
+    if (!raw) return PLACEHOLDER;
+    // Emoji character — use a neutral placeholder so <img> doesn't break
+    if ([...raw].length === 1 || [...raw].length === 2) return PLACEHOLDER;
+    // Base64 data URI or fully-qualified URL — use as-is
+    if (
+      raw.startsWith("data:image/") ||
+      raw.startsWith("http://") ||
+      raw.startsWith("https://") ||
+      raw.startsWith("blob:")
+    )
+      return raw;
+    // Relative path — prepend backend origin
+    return `${BACKEND_ORIGIN}${raw.startsWith("/") ? "" : "/"}${raw}`;
+  }, []);
+
+  /* ── Helper to read, merge & seed tradehub_products from localStorage ── */
+  const loadStoredProducts = useCallback(
+    (rawList: ProductCardItem[]): ProductCardItem[] => {
+      const BLOCKLIST = [/damasnik/i, /elllili/i];
+
+      const toCardItem = (p: any): ProductCardItem => {
+        const rawImage = p.imageUrl || p.image_url || p.image || p.img || "";
+        const resolvedImage = resolveProductImage(rawImage);
+        const price =
+          typeof p.price === "number" ? p.price : parseFloat(String(p.price)) || 0;
+        const rawRating = p.rating ?? p.averageRating ?? 4.5;
+        const rating =
+          typeof rawRating === "number" && !isNaN(rawRating) ? rawRating : 4.5;
+        return {
+          id: p.id,
+          title: p.title || p.name || "Unnamed Product",
+          brand: p.brand || p.vendor || p.vendorName || "Generic",
+          category: p.category || "Electronics",
+          subcategoryId: p.subcategoryId ?? null,
+          subcategory: p.subcategory ?? null,
+          subcategorySlug: p.subcategorySlug ?? null,
+          price,
+          rating,
+          image: resolvedImage,
+          stockQuantity: p.stockQuantity ?? p.stock ?? 0,
+          stock: p.stock ?? p.stockQuantity ?? 0,
+        } as ProductCardItem;
+      };
+
+      // ── Case 1: API returned products → merge into localStorage (global sync) ──
+      if (rawList.length > 0) {
+        // mergeApiProducts preserves locally-added vendor products and updates
+        // any products that exist in both API and localStorage.
+        // It then writes the unified result back to localStorage automatically.
+        const merged = mergeApiProducts(rawList);
+        // Write merged list back so next user (or tab) sees the same data
+        saveStoredProducts(merged, false);
+
+        return merged
+          .filter((p: any) => !BLOCKLIST.some((rx) => rx.test((p.name ?? p.title ?? '').toString())))
+          .map(toCardItem);
+      }
+
+      // ── Case 2: API returned nothing (offline / error) → read localStorage ──
+      const stored = getStoredProducts();
+      if (stored.length > 0) {
+        return stored
+          .filter((p: any) => !BLOCKLIST.some((rx) => rx.test((p.name ?? p.title ?? '').toString())))
+          .map(toCardItem);
+      }
+
+      // ── Case 3: Truly empty — seed from static mock catalog ──
+      seedProductsIfEmpty(fallbackCardProducts);
+      return fallbackCardProducts;
+    },
+    [resolveProductImage, fallbackCardProducts]
+  );
+
+  /* ── Fetch & Filter Products Function ──── */
+  const fetchProducts = useCallback(() => {
     setLoading(true);
 
     const params: import("../services/productService").ProductFilterParams = {};
@@ -269,6 +401,33 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
       if (brandIds.length > 0) params.brandIds = brandIds;
     }
 
+    const applyFiltersAndSet = (rawList: ProductCardItem[]) => {
+      let combined = loadStoredProducts(rawList);
+
+      if (activeCatObj)
+        combined = combined.filter(
+          (p) =>
+            p.category.toLowerCase() === activeCatObj.name.toLowerCase() ||
+            p.category.toLowerCase() === activeCatObj.id
+        );
+      if (activeSubObj)
+        combined = combined.filter(
+          (p) =>
+            p.subcategorySlug?.toLowerCase() === activeSubObj.id.toLowerCase() ||
+            p.subcategory?.toLowerCase().includes(activeSubObj.name.toLowerCase())
+        );
+      if (selectedBrands.size > 0)
+        combined = combined.filter((p) => selectedBrands.has(p.brand));
+      if (debouncedMin)
+        combined = combined.filter((p) => p.price >= parseFloat(debouncedMin));
+      if (debouncedMax)
+        combined = combined.filter((p) => p.price <= parseFloat(debouncedMax));
+      if (minRating != null)
+        combined = combined.filter((p) => p.rating >= minRating);
+
+      setAllProducts(combined);
+    };
+
     getProducts(Object.keys(params).length > 0 ? params : undefined)
       .then((data) => {
         if (data && data.length > 0) {
@@ -287,65 +446,55 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
             stock: (p as any).stockQuantity ?? undefined,
           })) as ProductCardItem[];
 
-          const brandFiltered =
-            selectedBrands.size > 0
-              ? mapped.filter((p) => selectedBrands.has(p.brand))
-              : mapped;
-          setAllProducts(brandFiltered);
+          applyFiltersAndSet(mapped);
         } else {
-          // Use fallback static data — apply all filters client-side
-          let fb = fallbackCardProducts;
-          if (activeCatObj)
-            fb = fb.filter(
-              (p) =>
-                p.category.toLowerCase() === activeCatObj.name.toLowerCase() ||
-                p.category.toLowerCase() === activeCatObj.id
-            );
-          if (activeSubObj)
-            fb = fb.filter(
-              (p) =>
-                p.subcategorySlug?.toLowerCase() === activeSubObj.id.toLowerCase() ||
-                p.subcategory?.toLowerCase().includes(activeSubObj.name.toLowerCase())
-            );
-          if (selectedBrands.size > 0)
-            fb = fb.filter((p) => selectedBrands.has(p.brand));
-          if (debouncedMin) fb = fb.filter((p) => p.price >= parseFloat(debouncedMin));
-          if (debouncedMax) fb = fb.filter((p) => p.price <= parseFloat(debouncedMax));
-          if (minRating != null) fb = fb.filter((p) => p.rating >= minRating);
-          setAllProducts(fb);
+          // API returned nothing — still try to show local vendor products
+          applyFiltersAndSet([]);
         }
       })
       .catch(() => {
-        let fb = fallbackCardProducts;
-        if (activeCatObj)
-          fb = fb.filter(
-            (p) =>
-              p.category.toLowerCase() === activeCatObj.name.toLowerCase() ||
-              p.category.toLowerCase() === activeCatObj.id
-          );
-        if (activeSubObj)
-          fb = fb.filter(
-            (p) =>
-              p.subcategorySlug?.toLowerCase() === activeSubObj.id.toLowerCase() ||
-              p.subcategory?.toLowerCase().includes(activeSubObj.name.toLowerCase())
-          );
-        if (selectedBrands.size > 0)
-          fb = fb.filter((p) => selectedBrands.has(p.brand));
-        if (debouncedMin) fb = fb.filter((p) => p.price >= parseFloat(debouncedMin));
-        if (debouncedMax) fb = fb.filter((p) => p.price <= parseFloat(debouncedMax));
-        if (minRating != null) fb = fb.filter((p) => p.rating >= minRating);
-        setAllProducts(fb);
+        // Network error — show whatever is in localStorage
+        applyFiltersAndSet([]);
       })
       .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     activeCatObj,
     activeSubObj,
     debouncedMin,
     debouncedMax,
     minRating,
-    selectedBrandsKey,
+    selectedBrands,
+    dbBrands,
+    loadStoredProducts,
+    fallbackCardProducts,
   ]);
+
+  /* Trigger fetch when filters change */
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  /* Listen for productsUpdated & storage events to refresh catalog in real time */
+  useEffect(() => {
+    const handleProductsUpdated = () => {
+      fetchProducts();
+    };
+
+    // 'storage' catches native cross-tab and same-tab dispatches from broadcastChange()
+    window.addEventListener("storage", handleProductsUpdated);
+    window.addEventListener("productsUpdated", handleProductsUpdated);
+    window.addEventListener("tradehub:products-changed", handleProductsUpdated);
+    window.addEventListener("tradehub-storage-update", handleProductsUpdated);
+    window.addEventListener("tradehub_products_updated", handleProductsUpdated);
+
+    return () => {
+      window.removeEventListener("storage", handleProductsUpdated);
+      window.removeEventListener("productsUpdated", handleProductsUpdated);
+      window.removeEventListener("tradehub:products-changed", handleProductsUpdated);
+      window.removeEventListener("tradehub-storage-update", handleProductsUpdated);
+      window.removeEventListener("tradehub_products_updated", handleProductsUpdated);
+    };
+  }, [fetchProducts]);
 
   /* ── Filtered & Sorted products list ────────────────────────── */
   const processedProducts = useMemo(() => {
@@ -363,12 +512,16 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
     }
 
     // Client-side sorting
+    // 'default' preserves insertion order — newest items were unshift()ed to index 0
     if (sortOption === "price-asc") {
       list.sort((a, b) => a.price - b.price);
     } else if (sortOption === "price-desc") {
       list.sort((a, b) => b.price - a.price);
     } else if (sortOption === "rating-desc") {
       list.sort((a, b) => b.rating - a.rating);
+    } else {
+      // 'default': lower array-index = newer product (unshift adds at index 0)
+      // No sort needed — already in insertion order
     }
 
     return list;
@@ -687,10 +840,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                         <span>All {activeCatObj.name}</span>
                       </div>
                       <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">
-                        {allProducts.filter(
+                        {rawContextProducts.filter(
                           (p) =>
-                            p.category.toLowerCase() === activeCatObj.name.toLowerCase() ||
-                            p.category.toLowerCase() === activeCatObj.id
+                            (p.category ?? '').toLowerCase() === activeCatObj.name.toLowerCase() ||
+                            (p.category ?? '').toLowerCase() === activeCatObj.id.toLowerCase()
                         ).length}
                       </span>
                     </button>
@@ -700,10 +853,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                       const SubIcon = sub.icon;
                       const isSelected =
                         activeSubObj?.id.toLowerCase() === sub.id.toLowerCase();
-                      const count = allProducts.filter(
+                      const count = rawContextProducts.filter(
                         (p) =>
                           p.subcategorySlug?.toLowerCase() === sub.id.toLowerCase() ||
-                          p.subcategory?.toLowerCase().includes(sub.name.toLowerCase())
+                          (p.subcategory ?? '').toLowerCase().includes(sub.name.toLowerCase())
                       ).length;
 
                       return (
@@ -739,10 +892,10 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                   categoriesData.map((cat) => {
                     const CatIcon = cat.icon;
                     const style = colorStyles[cat.color];
-                    const count = allProducts.filter(
+                    const count = getDepartmentCount(cat.name) || rawContextProducts.filter(
                       (p) =>
-                        p.category.toLowerCase() === cat.name.toLowerCase() ||
-                        p.category.toLowerCase() === cat.id
+                        (p.category ?? '').toLowerCase() === cat.name.toLowerCase() ||
+                        (p.category ?? '').toLowerCase() === cat.id.toLowerCase()
                     ).length;
                     return (
                       <button
@@ -1156,7 +1309,9 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
                               ))}
                             </div>
                             <span className="text-xs font-semibold text-slate-400 ml-1">
-                              {product.rating.toFixed(1)}
+                              {typeof product.rating === "number" && !isNaN(product.rating)
+                                ? product.rating.toFixed(1)
+                                : "4.5"}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-800/80">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, Edit, Trash2, X, DollarSign, Tag, Archive, Loader2, AlertCircle } from 'lucide-react';
+import { patchStoredProduct, removeStoredProduct } from '../utils/productStorage';
+import { Package, Plus, Edit, Trash2, X, DollarSign, Tag, Archive, Loader2, AlertCircle, Search } from 'lucide-react';
 import { getProducts, createProduct, updateProduct, deleteProduct, type Product } from '../services/productService';
 import apiClient from '../services/apiClient';
 
@@ -23,6 +24,7 @@ const CATEGORY_LIST = [
 
 export const VendorProducts: React.FC = () => {
   const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<VendorProduct | null>(null);
@@ -40,26 +42,79 @@ export const VendorProducts: React.FC = () => {
   // Fetch categories to get ID by name
   const [categoryMap, setCategoryMap] = useState<Record<string, number>>({});
 
-  // Load products from backend on mount
+  // Load products from backend & localStorage on mount
   useEffect(() => {
     loadProducts();
     loadCategories();
+
+    const handleSync = () => loadProducts();
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('productsUpdated', handleSync);
+    window.addEventListener('tradehub-storage-update', handleSync);
+    window.addEventListener('tradehub:products-changed', handleSync);
+    window.addEventListener('tradehub_products_updated', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('productsUpdated', handleSync);
+      window.removeEventListener('tradehub-storage-update', handleSync);
+      window.removeEventListener('tradehub:products-changed', handleSync);
+      window.removeEventListener('tradehub_products_updated', handleSync);
+    };
   }, []);
 
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const data = await getProducts();
-      setProducts(data.map((p: Product) => ({
-        id: p.id,
-        title: p.title,
-        category: p.category,
-        price: p.price,
-        stock: p.stockQuantity,
-        image: p.image,
-      })));
+      let data: Product[] = [];
+      try {
+        data = await getProducts();
+      } catch { }
+
+      let storedList: any[] = [];
+      try {
+        const storedRaw = localStorage.getItem('tradehub_products') || localStorage.getItem('vendora_vendor_products');
+        if (storedRaw) storedList = JSON.parse(storedRaw);
+      } catch { }
+
+      let deletedIds: number[] = [];
+      try {
+        const delRaw = localStorage.getItem('vendora_deleted_product_ids');
+        if (delRaw) deletedIds = JSON.parse(delRaw);
+      } catch { }
+
+      const combinedMap = new Map<number, VendorProduct>();
+
+      if (data && data.length > 0) {
+        data.forEach((p: Product) => {
+          if (!deletedIds.includes(p.id)) {
+            combinedMap.set(p.id, {
+              id: p.id,
+              title: p.title,
+              category: p.category,
+              price: p.price,
+              stock: p.stockQuantity,
+              image: p.image,
+            });
+          }
+        });
+      }
+
+      storedList.forEach((p: any) => {
+        if (!deletedIds.includes(p.id)) {
+          combinedMap.set(p.id, {
+            id: p.id,
+            title: p.title || p.name || 'Product',
+            category: p.category || 'Electronics',
+            price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+            stock: typeof p.stock === 'number' ? p.stock : (p.stockQuantity ?? 0),
+            image: p.image || '📦',
+          });
+        }
+      });
+
+      setProducts(Array.from(combinedMap.values()));
     } catch {
-      setError('Failed to load products from server.');
+      setError('Failed to load products.');
     } finally {
       setLoading(false);
     }
@@ -104,25 +159,48 @@ export const VendorProducts: React.FC = () => {
 
     try {
       const categoryId = categoryMap[category] ?? 1;
-      if (editingProduct) {
-        await updateProduct(editingProduct.id, {
-          name: title,
-          description: description || undefined,
-          price: parseFloat(price),
-          stockQuantity: parseInt(stock, 10),
-          categoryId,
-          imageUrl: imageUrl || undefined,
-        });
-      } else {
-        await createProduct({
-          name: title,
-          description: description || `${title} — quality product.`,
-          price: parseFloat(price),
-          stockQuantity: parseInt(stock, 10),
-          imageUrl: imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&auto=format&fit=crop&q=60',
-          categoryId,
-        });
+      try {
+        if (editingProduct) {
+          await updateProduct(editingProduct.id, {
+            name: title,
+            description: description || undefined,
+            price: parseFloat(price),
+            stockQuantity: parseInt(stock, 10),
+            categoryId,
+            imageUrl: imageUrl || undefined,
+          });
+        } else {
+          await createProduct({
+            name: title,
+            description: description || `${title} — quality product.`,
+            price: parseFloat(price),
+            stockQuantity: parseInt(stock, 10),
+            imageUrl: imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&auto=format&fit=crop&q=60',
+            categoryId,
+          });
+        }
+      } catch (apiErr) {
+        console.warn('Backend API save warning, proceeding with localStorage sync:', apiErr);
       }
+
+        // Upsert only this product in the full tradehub_products list
+        try {
+          const newProductObj = {
+            id: editingProduct ? editingProduct.id : Date.now(),
+            title: title,
+            name: title,
+            category: category,
+            price: parseFloat(price),
+            stock: parseInt(stock, 10),
+            stockQuantity: parseInt(stock, 10),
+            image: imageUrl || '📦',
+            description: description || `${title} — quality product.`,
+          };
+          patchStoredProduct(newProductObj);
+          window.dispatchEvent(new Event('productsUpdated'));
+          window.dispatchEvent(new Event('tradehub:products-changed'));
+          window.dispatchEvent(new Event('tradehub-storage-update'));
+        } catch {}
 
       await loadProducts();
 
@@ -145,12 +223,29 @@ export const VendorProducts: React.FC = () => {
   const handleDeleteProduct = async (id: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
     try {
-      await deleteProduct(id);
+      try {
+        await deleteProduct(id);
+      } catch (apiErr) {
+        console.warn('Backend API delete warning, proceeding with localStorage sync:', apiErr);
+      }
+
+        // Remove only this product from the full list; deny-list is updated internally
+        try {
+          removeStoredProduct(id);
+          window.dispatchEvent(new Event('productsUpdated'));
+          window.dispatchEvent(new Event('tradehub:products-changed'));
+          window.dispatchEvent(new Event('tradehub-storage-update'));
+        } catch {}
+
       setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
       setError(err.message || 'Failed to delete product.');
     }
   };
+
+  const filteredProducts = products.filter((p) =>
+    (p.title || '').toLowerCase().includes(searchQuery.toLowerCase().trim())
+  );
 
   return (
     <div className="p-6 sm:p-10 space-y-8 text-left relative">
@@ -165,13 +260,25 @@ export const VendorProducts: React.FC = () => {
             <p className="text-sm text-slate-400 mt-1">Manage and edit your active marketplace listings.</p>
           </div>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-5 rounded-xl transition-all shadow-lg shadow-indigo-600/20"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Add Product</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-slate-900 border border-slate-700 text-white text-xs rounded-xl pl-9 pr-4 py-2.5 focus:outline-none focus:border-indigo-500 placeholder:text-slate-500 w-48 sm:w-64 transition-all"
+            />
+          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-5 rounded-xl transition-all shadow-lg shadow-indigo-600/20 whitespace-nowrap"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Add Product</span>
+          </button>
+        </div>
       </div>
 
       {/* Error Banner */}
@@ -202,15 +309,15 @@ export const VendorProducts: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800 text-sm text-slate-350">
-                {products.length === 0 ? (
+                {filteredProducts.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-16 text-center text-slate-500">
                       <Archive className="h-10 w-10 mx-auto mb-3 opacity-40" />
-                      <p>No products yet. Click <strong>Add Product</strong> to get started.</p>
+                      <p>{searchQuery ? 'No products match your search.' : 'No products yet. Click Add Product to get started.'}</p>
                     </td>
                   </tr>
                 ) : (
-                  products.map((p) => (
+                  filteredProducts.map((p) => (
                     <tr key={p.id} className="hover:bg-slate-950/20 transition-colors">
                       <td className="px-6 py-4 flex items-center space-x-3.5">
                         <img

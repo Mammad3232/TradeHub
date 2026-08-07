@@ -125,7 +125,12 @@ export const deleteProduct = async (id: number): Promise<void> => {
 
 export const getImageUrl = (imagePath?: string): string => {
   if (!imagePath) return "";
-  if (imagePath.startsWith("http://") || imagePath.startsWith("https://") || imagePath.startsWith("blob:")) {
+  if (
+    imagePath.startsWith("http://") ||
+    imagePath.startsWith("https://") ||
+    imagePath.startsWith("blob:") ||
+    imagePath.startsWith("data:")
+  ) {
     return imagePath;
   }
   return `http://localhost:5229${imagePath.startsWith("/") ? "" : "/"}${imagePath}`;

@@ -33,13 +33,14 @@ const vendorLinks: SidebarLink[] = [
 ];
 
 const adminLinks: SidebarLink[] = [
-  { label: 'Dashboard',  to: '/admin/dashboard',  icon: LayoutDashboard },
-  { label: 'Users',      to: '/admin/users',       icon: Users },
-  { label: 'Vendors',    to: '/admin/vendors',     icon: Store },
-  { label: 'Orders',     to: '/admin/orders',      icon: ClipboardList },
-  { label: 'Analytics',  to: '/admin/analytics',   icon: BarChart3 },
-  { label: 'Permissions',to: '/admin/permissions', icon: Shield },
-  { label: 'Settings',   to: '/admin/settings',    icon: Settings },
+  { label: 'Dashboard',   to: '/admin/dashboard',   icon: LayoutDashboard },
+  { label: 'Users',       to: '/admin/users',       icon: Users },
+  { label: 'Vendors',     to: '/admin/vendors',     icon: Store },
+  { label: 'Orders',      to: '/admin/orders',      icon: ClipboardList },
+  { label: 'Products',    to: '/admin/products',    icon: Package },
+  { label: 'Analytics',   to: '/admin/analytics',   icon: BarChart3 },
+  { label: 'Permissions', to: '/admin/permissions', icon: Shield },
+  { label: 'Settings',    to: '/admin/settings',    icon: Settings },
 ];
 
 const roleConfig: Record<Role, { links: SidebarLink[]; label: string; color: string; accentBg: string }> = {

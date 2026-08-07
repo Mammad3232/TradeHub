@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { ShopByCategory } from "../components/ShopByCategory";
 import { ProductGrid } from "../components/ProductGrid";
 import { ArrowRight, Sparkles } from "lucide-react";
@@ -115,12 +115,6 @@ export const Home: React.FC = () => {
                 <span>{t('hero.shopNow')}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <Link
-                to="/vendor-register"
-                className="w-full sm:w-auto bg-transparent hover:bg-slate-800/50 text-slate-300 hover:text-white font-medium py-3.5 px-8 rounded-xl border border-slate-700 transition-all duration-200 text-center"
-              >
-                {t('hero.becomeVendor')}
-              </Link>
             </div>
           </div>
 

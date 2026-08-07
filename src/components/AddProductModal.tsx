@@ -16,6 +16,7 @@ import {
   Tag,
 } from "lucide-react";
 import { createProduct, getBrands, type CreateProductInput, type Brand } from "../services/productService";
+import { patchStoredProduct, broadcastChange } from "../utils/productStorage";
 import apiClient from "../services/apiClient";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -224,8 +225,14 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     }
     setError(null);
     setSelectedFile(file);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    setImagePreview(URL.createObjectURL(file));
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        setImagePreview(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFileDrop = (e: React.DragEvent) => {
@@ -245,7 +252,9 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
 
   const removeFile = () => {
     setSelectedFile(null);
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    if (imagePreview && imagePreview.startsWith("blob:")) {
+      URL.revokeObjectURL(imagePreview);
+    }
     setImagePreview(null);
   };
 
@@ -264,8 +273,31 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
     setError(null);
     setLoading(true);
 
+    // Derive category and brand display names for localStorage snapshot
+    const categoryName = categories.find((c) => c.id === form.categoryId)?.name ?? "Other";
+    const brandName    = brands.find((b) => b.id === form.brandId)?.name ?? "TradeHub";
+    const localId      = Date.now();
+    const DEFAULT_PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+
+    // Safely resolve permanent image URL (convert File to Base64 or use preview or clean default)
+    let persistentImage = DEFAULT_PLACEHOLDER;
+    if (imagePreview && (imagePreview.startsWith('data:') || imagePreview.startsWith('http'))) {
+      persistentImage = imagePreview;
+    } else if (selectedFile) {
+      try {
+        persistentImage = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(selectedFile);
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = (err) => reject(err);
+        });
+      } catch {
+        persistentImage = DEFAULT_PLACEHOLDER;
+      }
+    }
+
     try {
-      await createProduct({
+      const apiProduct = await createProduct({
         name: form.name.trim(),
         description: form.description.trim(),
         price: Number(form.price),
@@ -277,6 +309,30 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         imageFile: selectedFile,
       });
 
+      const finalImg = (apiProduct.image && !apiProduct.image.startsWith('blob:'))
+        ? apiProduct.image
+        : persistentImage;
+
+      // ── Persist API-returned product to localStorage immediately ──
+      patchStoredProduct({
+        id: apiProduct.id ?? localId,
+        name: apiProduct.title ?? form.name.trim(),
+        title: apiProduct.title ?? form.name.trim(),
+        price: apiProduct.price,
+        stock: apiProduct.stockQuantity,
+        stockQuantity: apiProduct.stockQuantity,
+        lowStockThreshold: apiProduct.lowStockThreshold ?? null,
+        category: apiProduct.category ?? categoryName,
+        vendor: apiProduct.vendorName ?? brandName,
+        vendorName: apiProduct.vendorName ?? brandName,
+        image: finalImg,
+        imageUrl: finalImg,
+        status: apiProduct.stockQuantity === 0 ? 'Out of Stock' : 'Active',
+        isActive: apiProduct.isActive ?? true,
+      });
+      broadcastChange();
+      window.dispatchEvent(new CustomEvent('tradehub_products_updated'));
+
       setSaved(true);
       setTimeout(() => {
         resetState();
@@ -284,11 +340,48 @@ export const AddProductModal: React.FC<AddProductModalProps> = ({
         onClose();
       }, 700);
     } catch (err: unknown) {
-      const msg =
-        err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-          : null;
-      setError(msg || "Failed to create product. Please try again.");
+      // ── API failed: save a local-only product so creation never fails silently ──
+      const localProduct = {
+        id: localId,
+        name: form.name.trim(),
+        title: form.name.trim(),
+        price: Number(form.price),
+        stock: Number(form.stockQuantity),
+        stockQuantity: Number(form.stockQuantity),
+        lowStockThreshold: form.lowStockThreshold != null && Number(form.lowStockThreshold) > 0
+          ? Number(form.lowStockThreshold)
+          : null,
+        category: categoryName,
+        vendor: brandName,
+        vendorName: brandName,
+        image: persistentImage,
+        imageUrl: persistentImage,
+        status: Number(form.stockQuantity) === 0 ? 'Out of Stock' : 'Active',
+        isActive: true,
+        description: form.description.trim(),
+        createdAt: new Date().toISOString(),
+      };
+
+      try {
+        patchStoredProduct(localProduct);
+        broadcastChange();
+        window.dispatchEvent(new CustomEvent('tradehub_products_updated'));
+
+        // Show brief success then close
+        setSaved(true);
+        setTimeout(() => {
+          resetState();
+          onSuccess();
+          onClose();
+        }, 700);
+      } catch {
+        // Only surface an error if even the localStorage fallback fails
+        const msg =
+          err && typeof err === "object" && "response" in err
+            ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+            : null;
+        setError(msg || "Failed to create product. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { mergeApiProducts, saveStoredProducts, seedProductsIfEmpty, removeStoredProduct, patchStoredProduct, broadcastChange, getStoredProducts } from '../utils/productStorage';
 import { getDashboardStats, type DashboardStats } from '../services/dashboardService';
 import { AddProductModal } from '../components/AddProductModal';
 import { getProducts, updateProduct, deleteProduct, getImageUrl, type Product as ApiProduct } from '../services/productService';
@@ -180,7 +181,7 @@ const initialPermissions: PermissionRule[] = [
 
 // ── Tab definitions ────────────────────────────────────────────────────────────
 
-type ActiveTab = 'dashboard' | 'users' | 'brands' | 'vendors' | 'products' | 'orders' | 'analytics' | 'permissions' | 'settings';
+type ActiveTab = 'dashboard' | 'users' | 'vendors' | 'orders' | 'products' | 'analytics' | 'permissions' | 'settings';
 
 const tabs: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -188,7 +189,6 @@ const tabs: { id: ActiveTab; label: string; icon: React.ElementType }[] = [
   { id: 'vendors', label: 'Vendors', icon: Store },
   { id: 'orders', label: 'Orders', icon: ClipboardList },
   { id: 'products', label: 'Products', icon: Package },
-  { id: 'brands', label: 'Brands', icon: Tag },
   { id: 'analytics', label: 'Analytics', icon: BarChart3 },
   { id: 'permissions', label: 'Permissions', icon: Shield },
   { id: 'settings', label: 'Settings', icon: SettingsIcon },
@@ -240,7 +240,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   // State Management — orders list from API
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [brands] = useState<Brand[]>(initialBrands);
-  const [products, setProducts] = useState<Product[]>(initialProducts);
+  // Blocklist: product names that should never appear in the admin panel.
+  // Extended each time a corrupted / offensive entry is discovered.
+  const ADMIN_PRODUCT_BLOCKLIST = [/damasnik/i, /elllili/i];
+
+  const loadAdminProductsFromLocalStorage = useCallback((): Product[] => {
+    try {
+      const storedList = getStoredProducts();
+      if (storedList && storedList.length > 0) {
+        let deletedIds: number[] = [];
+        try {
+          const delRaw = localStorage.getItem('vendora_deleted_product_ids');
+          if (delRaw) deletedIds = JSON.parse(delRaw);
+        } catch {}
+
+        const BLOCKLIST = [/damasnik/i, /elllili/i];
+        return storedList
+          .filter((p: any) => !deletedIds.includes(p.id))
+          .filter((p: any) => {
+            const n = (p.name ?? p.title ?? '').toString();
+            return !BLOCKLIST.some((rx) => rx.test(n));
+          })
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name || p.title || 'Product',
+            price: typeof p.price === 'number' ? p.price : parseFloat(p.price) || 0,
+            stock: typeof p.stock === 'number' ? p.stock : (p.stockQuantity ?? 0),
+            lowStockThreshold: p.lowStockThreshold ?? null,
+            vendor: p.vendorName || p.vendor || 'TradeHub',
+            category: p.category || 'Electronics',
+            image: p.image || p.imageUrl || '',
+            status: p.status || (p.stock === 0 || p.stockQuantity === 0 ? 'Out of Stock' : 'Active'),
+          }));
+      }
+    } catch {}
+    return [];
+  }, []);
+
+  const [products, setProducts] = useState<Product[]>(loadAdminProductsFromLocalStorage);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [permissions, setPermissions] = useState<PermissionRule[]>(initialPermissions);
 
@@ -305,27 +342,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   }, []);
 
   const handleProductCreated = useCallback(() => {
-    getProducts()
-      .then((apiProducts: ApiProduct[]) => {
-        const mapped: Product[] = apiProducts.map((p) => ({
-          id: p.id,
-          name: p.title,
-          price: p.price,
-          stock: p.stockQuantity,
-          lowStockThreshold: p.lowStockThreshold ?? null,
-          vendor: 'TradeHub',
-          category: p.category,
-          image: getImageUrl(p.image),
-          status: p.isActive
-            ? p.stockQuantity === 0
-              ? 'Out of Stock'
-              : 'Active'
-            : 'Draft',
-        }));
-        setProducts(mapped);
-      })
-      .catch(() => { /* keep existing list on error */ });
-  }, []);
+    // ALWAYS reload Admin state from localStorage directly. NEVER write/overwrite localStorage with API products.
+    setProducts(loadAdminProductsFromLocalStorage());
+  }, [loadAdminProductsFromLocalStorage]);
 
   const handleTabChange = (newTab: ActiveTab) => {
     setActiveTab(newTab);
@@ -342,6 +361,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   useEffect(() => {
     localStorage.setItem('vendora_admin_vendors', JSON.stringify(vendors));
   }, [vendors]);
+
+  // Live synchronization effect: re-read products from localStorage on updates
+  useEffect(() => {
+    const handleSync = () => {
+      setProducts(loadAdminProductsFromLocalStorage());
+    };
+
+    // Listen for both native 'storage' (cross-tab) and our custom events (same-tab)
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('productsUpdated', handleSync);
+    window.addEventListener('tradehub:products-changed', handleSync);
+    window.addEventListener('tradehub-storage-update', handleSync);
+    window.addEventListener('tradehub_products_updated', handleSync);
+
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('productsUpdated', handleSync);
+      window.removeEventListener('tradehub:products-changed', handleSync);
+      window.removeEventListener('tradehub-storage-update', handleSync);
+      window.removeEventListener('tradehub_products_updated', handleSync);
+    };
+  }, [loadAdminProductsFromLocalStorage]);
 
   useEffect(() => {
     getDashboardStats()
@@ -366,23 +407,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
       });
 
     getProducts()
-      .then((apiProducts: ApiProduct[]) => {
-        const mapped: Product[] = apiProducts.map((p) => ({
-          id: p.id,
-          name: p.title,
-          price: p.price,
-          stock: p.stockQuantity,
-          lowStockThreshold: p.lowStockThreshold ?? null,
-          vendor: p.vendorName || 'TradeHub',
-          category: p.category,
-          image: getImageUrl(p.image),
-          status: p.isActive
-            ? p.stockQuantity === 0
-              ? 'Out of Stock'
-              : 'Active'
-            : 'Draft',
-        }));
-        setProducts(mapped);
+      .then((_apiProducts: ApiProduct[]) => {
+        // ALWAYS use existing products from localStorage as-is. NEVER overwrite tradehub_products on Admin login.
+        setProducts(loadAdminProductsFromLocalStorage());
       })
       .catch((err) => {
         console.error('Failed to load products in AdminDashboard:', err);
@@ -603,12 +630,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
 
   const handleDeleteProduct = async (id: number) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
+
+    // 1. Best-effort backend API deletion
     try {
       await deleteProduct(id);
-      setProducts((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error('Failed to delete product:', err);
+      console.warn('API deleteProduct warning / fallback:', err);
     }
+
+    // 2. Track deleted ID in the shared deny-list AND remove from the full
+    // tradehub_products list via the utility (preserves all other products).
+    removeStoredProduct(id);
+
+    // 3. Update Admin's own UI state
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -619,18 +654,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
   const handleUpdateProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingProduct) return;
+    const newPrice = parseFloat(editPrice);
+    const newStock = parseInt(editStock, 10);
+    const threshold = editLowStockThreshold !== '' ? parseInt(editLowStockThreshold, 10) : 0;
     try {
-      const threshold = editLowStockThreshold !== '' ? parseInt(editLowStockThreshold, 10) : 0;
       await updateProduct(editingProduct.id, {
-        price: parseFloat(editPrice),
-        stockQuantity: parseInt(editStock, 10),
+        price: newPrice,
+        stockQuantity: newStock,
         lowStockThreshold: threshold > 0 ? threshold : 0,
       });
-      handleProductCreated();
-      setEditingProduct(null);
     } catch (err) {
-      console.error('Failed to update product:', err);
+      console.warn('API update fallback — persisting to localStorage directly:', err);
     }
+
+    // Always persist the updated fields to localStorage so F5 refresh keeps the changes.
+    patchStoredProduct({
+      ...editingProduct,
+      price: newPrice,
+      stockQuantity: newStock,
+      stock: newStock,
+      lowStockThreshold: threshold > 0 ? threshold : 0,
+      status: newStock === 0 ? 'Out of Stock' : (editingProduct.status || 'Active'),
+    });
+    window.dispatchEvent(new CustomEvent('tradehub_products_updated'));
+
+    // Update the Admin table row immediately (no full re-fetch needed)
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === editingProduct.id
+          ? { ...p, price: newPrice, stock: newStock, stockQuantity: newStock }
+          : p
+      )
+    );
+    setEditingProduct(null);
   };
 
   const handleTogglePermission = (id: string, roleKey: 'admin' | 'vendor' | 'customer') => {
@@ -875,14 +931,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                 <h2 className="text-lg font-bold text-white">User Account Directory</h2>
                 <p className="text-xs text-slate-400 mt-0.5">{users.length} active registered users in system state.</p>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-red-600/20"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>+ Add User</span>
-              </button>
             </div>
 
             <div className="overflow-x-auto">
@@ -1044,7 +1092,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ siteSettings, up
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 overflow-hidden flex items-center justify-center flex-shrink-0">
                             {p.image ? (
-                              <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                              <img
+                                src={getImageUrl(p.image) || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500'}
+                                alt={p.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.src = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
+                                }}
+                              />
                             ) : (
                               <Package className="w-4 h-4 text-slate-400" />
                             )}

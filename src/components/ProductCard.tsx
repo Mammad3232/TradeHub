@@ -12,13 +12,7 @@ import { QuickViewModal } from './QuickViewModal';
 // prepend the backend origin. Absolute URLs are passed through unchanged.
 const BACKEND_ORIGIN = 'http://localhost:5229';
 
-const PLACEHOLDER =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E" +
-  "%3Crect width='400' height='300' fill='%230f172a'/%3E" +
-  "%3Crect x='160' y='100' width='80' height='60' rx='8' fill='%231e293b'/%3E" +
-  "%3Ccircle cx='185' cy='120' r='8' fill='%2334d399' opacity='.4'/%3E" +
-  "%3Cpolygon points='175,150 205,130 205,150' fill='%2334d399' opacity='.4'/%3E" +
-  "%3C/svg%3E";
+const PLACEHOLDER = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500';
 
 const resolveImage = (raw?: string): string => {
   if (!raw) return PLACEHOLDER;

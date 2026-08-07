@@ -500,7 +500,11 @@ export const MyOrders: React.FC = () => {
       await deleteMyAccount();
     } catch { /* best-effort */ }
     finally {
-      localStorage.clear();
+      localStorage.removeItem('token');
+      localStorage.removeItem('tradehub_token');
+      localStorage.removeItem('vendora_user');
+      localStorage.removeItem('mockUser');
+      localStorage.removeItem('vendora_active_user');
       window.location.href = '/login';
     }
   };

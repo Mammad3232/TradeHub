@@ -2,13 +2,14 @@ import React, { useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Layers, ShoppingBag, ArrowLeft, Filter } from 'lucide-react';
 import { ProductCard } from '../components/ProductCard';
-import mockProducts from '../mocks/products.json';
+import { useProductContext } from '../context/ProductContext';
 import type { Product } from '../services/api';
 
 const normalizeCategory = (str = '') => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 export const CategoryPage: React.FC = () => {
   const { categoryName } = useParams<{ categoryName: string }>();
+  const { products: contextProducts } = useProductContext();
 
   // Format category slug back to display title (e.g., "home-decor" -> "Home Decor")
   const formattedCategoryName = useMemo(() => {
@@ -19,12 +20,13 @@ export const CategoryPage: React.FC = () => {
       .join(' ');
   }, [categoryName]);
 
-  // Robust category matching using character normalization
+  // Filter products directly from single-source ProductContext
   const filteredProducts = useMemo<Product[]>(() => {
-    if (!categoryName) return mockProducts as unknown as Product[];
+    const sourceList = contextProducts as unknown as Product[];
+    if (!categoryName) return sourceList;
     const normalizedTarget = normalizeCategory(categoryName);
-    
-    return (mockProducts as unknown as Product[]).filter((p) => {
+
+    return sourceList.filter((p) => {
       const normalizedPCat = normalizeCategory(p.category);
       return (
         normalizedPCat === normalizedTarget ||
@@ -32,7 +34,7 @@ export const CategoryPage: React.FC = () => {
         normalizedTarget.includes(normalizedPCat)
       );
     });
-  }, [categoryName]);
+  }, [categoryName, contextProducts]);
 
   return (
     <div className="min-h-screen bg-[#060913] text-slate-100 py-10 px-4 sm:px-6 lg:px-8 space-y-8">

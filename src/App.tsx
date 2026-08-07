@@ -39,6 +39,7 @@ import { PageTracker } from './components/PageTracker';
 import { ChatWidget } from './components/ChatWidget';
 
 import { PreferencesProvider } from './context/PreferencesContext';
+import { ProductProvider } from './context/ProductContext';
 
 // ── Shared user type (single source of truth for the whole app) ───────────────
 export interface CurrentUser {
@@ -237,6 +238,10 @@ function App() {
     localStorage.setItem('vendora_user', JSON.stringify(normalized));
     localStorage.setItem('mockUser', JSON.stringify(normalized));
     localStorage.setItem('vendora_active_user', JSON.stringify(normalized));
+
+    // Force ProductContext / all subscribers to re-sync tradehub_products directly from localStorage
+    window.dispatchEvent(new Event('productsUpdated'));
+    window.dispatchEvent(new Event('tradehub:products-changed'));
   };
 
   // ── Sign Out Handler
@@ -247,6 +252,10 @@ function App() {
       name: '',
       role: 'Guest',
     });
+
+    // Force ProductContext / all subscribers to re-sync tradehub_products directly from localStorage
+    window.dispatchEvent(new Event('productsUpdated'));
+    window.dispatchEvent(new Event('tradehub:products-changed'));
   };
 
   // Listen for user state updates (e.g. from Vendor Settings logo changes) to instantly sync global Header
@@ -305,10 +314,10 @@ function App() {
 
   return (
     <PreferencesProvider>
-      <ShopProvider>
-        <Router>
-          <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
-            <>
+      <ProductProvider>
+        <ShopProvider>
+          <Router>
+            <NotificationProvider userRole={currentUser.role} isLoggedIn={currentUser.isLoggedIn}>
               <AdminOrderToastContainer />
               <RoleUpdateToast />
               <ScrollToTop />
@@ -398,10 +407,10 @@ function App() {
                 {/* ── 404 Catch-All ──────────────────────────────────────────── */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </>
-          </NotificationProvider>
-        </Router>
-      </ShopProvider>
+            </NotificationProvider>
+          </Router>
+        </ShopProvider>
+      </ProductProvider>
     </PreferencesProvider>
   );
 }
